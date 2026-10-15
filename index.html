@@ -26,7 +26,7 @@ table{width:100%;border-collapse:collapse;font-size:14px;display:block;overflow-
 #menu{display:none}
 @media(max-width:800px){#app{grid-template-columns:1fr}aside{position:fixed;left:-260px;width:240px;z-index:9;transition:.2s}aside.open{left:0}#menu{display:inline-block}}
 </style></head><body>
-<div id="login"><div class="lbox"><img src="https://raw.githubusercontent.com/benehaaelohim-coder/divine-seeds-portal/main/logo.png" alt="Divine Seeds International Schools logo" onerror="this.style.display='none'"><h2>DIVINE SEEDS INTERNATIONAL EKET</h2><small>Training Godly Future Champions</small><br><br>
+<div id="login"><div class="lbox"><img src="https://raw.githubusercontent.com/benehaaelohim-coder/divine-seeds-portal/main/logo.png" alt="Divine Seeds" style="width:48px;height:48px;object-fit:contain"> alt="Divine Seeds International Schools logo" onerror="this.style.display='none'"><h2>DIVINE SEEDS INTERNATIONAL EKET</h2><small>Training Godly Future Champions</small><br><br>
 <input id="u" placeholder="Username / ID"><input id="p" type="password" placeholder="Password"><button onclick="login()" style="width:100%">Sign in</button>
 <button class="g" onclick="bio()" style="width:100%">Sign in with Fingerprint</button><p id="err" class="red"></p></div></div>
 <div id="app"><aside id="side"></aside><main><div class="top"><button id="menu" onclick="side.classList.toggle('open')">☰</button><h2 id="ttl"></h2><div><span id="bell" style="cursor:pointer" onclick="go('notes')">🔔</span> <button class="g" onclick="auth.signOut()">Logout</button></div></div><div id="main"></div></main></div>
