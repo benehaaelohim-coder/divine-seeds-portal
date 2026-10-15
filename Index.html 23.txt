@@ -31,7 +31,7 @@ table{width:100%;border-collapse:collapse;font-size:14px;display:block;overflow-
 <button class="g" onclick="bio()" style="width:100%">Sign in with Fingerprint</button><p id="err" class="red"></p></div></div>
 <div id="app"><aside id="side"></aside><main><div class="top"><button id="menu" onclick="side.classList.toggle('open')">☰</button><h2 id="ttl"></h2><div><span id="bell" style="cursor:pointer" onclick="go('notes')">🔔</span> <button class="g" onclick="auth.signOut()">Logout</button></div></div><div id="main"></div></main></div>
 <script>
-const LOGO_URL="https://raw.githubusercontent.com/YOUR_GITHUB_USERNAME/divine-seeds-portal/main/logo.png";
+const LOGO_URL="https://raw.githubusercontent.com/https://raw.githubusercontent.com/benehaaelohim-coder/divine-seeds-portal/main/logo.png  Copy logo URL/divine-seeds-portal/main/logo.png";
 
 const CFG = {
   apiKey: "AIzaSyDLryqwFI885uE0xQzSUN2Qo0MZZoDxVm0",
