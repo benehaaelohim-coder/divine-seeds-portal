@@ -9,13 +9,13 @@ body.student{--bg:#0e1a2e;--card:#16253d;--tx:#eef2fa;--mut:#9fb0cc;--bd:#243656
 *{box-sizing:border-box}body{margin:0;font-family:Inter,Segoe UI,Arial,sans-serif;background:var(--bg);color:var(--tx)}
 #login{min-height:100vh;display:grid;place-items:center;background:linear-gradient(135deg,#10213f,#1c3f94 60%,#e0147a);padding:16px}
 .lbox{background:#fff;color:#10213f;border-radius:20px;padding:32px;width:min(400px,100%);text-align:center;box-shadow:0 20px 60px #0006}
-.lbox img{width:130px}.lbox small{color:#e0147a;font-weight:600}
+.lbox img{width:130px;height:130px;object-fit:contain;display:block;margin:0 auto 10px}.lbox small{color:#e0147a;font-weight:600}
 input,select,textarea,button{font:inherit;padding:10px 12px;border-radius:10px;border:1px solid var(--bd);width:100%;margin:5px 0;background:var(--card);color:var(--tx)}
 button{background:var(--pri);color:#fff;border:0;cursor:pointer;font-weight:600;width:auto}body.student button{color:#10213f}
 button.s{background:var(--acc);color:#fff}button.g{background:transparent;color:var(--pri);border:1px solid var(--pri)}
 #app{display:none;grid-template-columns:240px 1fr;min-height:100vh}
 aside{background:var(--side);color:#fff;padding:16px;position:sticky;top:0;height:100vh;overflow:auto}
-aside img{width:70px;display:block;margin:0 auto 6px}aside h4{text-align:center;margin:0 0 14px;font-size:13px;color:var(--gold)}
+aside img{width:70px;height:70px;object-fit:contain;display:block;margin:0 auto 6px}aside h4{text-align:center;margin:0 0 14px;font-size:13px;color:var(--gold)}
 aside a{display:block;padding:10px 12px;border-radius:10px;color:#cfd9ee;cursor:pointer;margin:2px 0}aside a:hover,aside a.on{background:#ffffff22;color:#fff}
 main{padding:20px;overflow:hidden}.top{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;gap:10px}
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}.card{background:var(--card);border:1px solid var(--bd);border-radius:16px;padding:18px;margin-bottom:14px}
@@ -26,12 +26,12 @@ table{width:100%;border-collapse:collapse;font-size:14px;display:block;overflow-
 #menu{display:none}
 @media(max-width:800px){#app{grid-template-columns:1fr}aside{position:fixed;left:-260px;width:240px;z-index:9;transition:.2s}aside.open{left:0}#menu{display:inline-block}}
 </style></head><body>
-<div id="login"><div class="lbox"><img src="https://raw.githubusercontent.com/benehaaelohim-coder/divine-seeds-portal/main/logo.png" alt="Divine Seeds International Schools logo" onerror="this.style.display='none'"><h2>DIVINE SEEDS INTERNATIONAL EKET</h2><small>Training Godly Future Champions</small><br><br>
+<div id="login"><div class="lbox"><img src="./logo.png" alt="Divine Seeds International Schools logo" onerror="this.style.display='none'"><h2>DIVINE SEEDS INTERNATIONAL EKET</h2><small>Training Godly Future Champions</small><br><br>
 <input id="u" placeholder="Username / ID"><input id="p" type="password" placeholder="Password"><button onclick="login()" style="width:100%">Sign in</button>
 <button class="g" onclick="bio()" style="width:100%">Sign in with Fingerprint</button><p id="err" class="red"></p></div></div>
 <div id="app"><aside id="side"></aside><main><div class="top"><button id="menu" onclick="side.classList.toggle('open')">☰</button><h2 id="ttl"></h2><div><span id="bell" style="cursor:pointer" onclick="go('notes')">🔔</span> <button class="g" onclick="auth.signOut()">Logout</button></div></div><div id="main"></div></main></div>
 <script>
-const LOGO_URL="https://raw.githubusercontent.com/benehaaelohim-coder/divine-seeds-portal/main/logo.png";
+const LOGO_URL="./logo.png";
 
 const CFG = {
   apiKey: "AIzaSyDLryqwFI885uE0xQzSUN2Qo0MZZoDxVm0",
