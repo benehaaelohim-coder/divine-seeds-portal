@@ -51,11 +51,11 @@ $('#lg').src=LOGO_URL;
 const P=firebase.auth.Auth.Persistence;const ready=(async()=>{for(const m of [P.LOCAL,P.SESSION,P.NONE]){try{await auth.setPersistence(m);return}catch(e){}}})();
 
 const MENU={student:['dash:Dashboard','news:Announcements','acct:My Account'],
-teacher:['dash:My Dashboard','scores:Enter Scores','attend:Attendance','news:Announcements','acct:My Account'],
+teacher:['dash:My Dashboard','scores:Enter Scores','roll:Class Attendance','attend:Attendance','news:Announcements','acct:My Account'],
 staff:['dash:My Dashboard','attend:Attendance','news:Announcements','acct:My Account'],
 accountant:['fees:Fees & Payments','dash:My Dashboard','attend:Attendance','news:Announcements','acct:My Account'],
 confectionery:['dash:My Dashboard','bread:Confectionery','attend:Attendance','news:Announcements','acct:My Account'],
-principal:['mgmt:Overview','reg:Registration','fees:Fees & Payments','news:Post Announcement','pub:Validate Results','attend:Attendance','bread:Confectionery','notes:Notifications','acct:My Account']};
+principal:['mgmt:Overview','reg:Registration','fees:Fees & Payments','news:Post Announcement','pub:Validate Results','roll:Take Attendance','attend:Attendance','bread:Confectionery','notes:Notifications','acct:My Account']};
 MENU.proprietor=MENU.admin=[...MENU.principal,'staffreg:Staff & Roles','stat:Stationery','reset:Reset'];
 
 let unlocked=false;
@@ -140,7 +140,7 @@ const list=async(c,...f)=>{let q=db.collection(c);f.forEach(x=>q=q.where(...x));
 const notify=m=>add('notifications',{msg:m,to:MG});
 const set=h=>mainEl.innerHTML=h;
 function go(k){document.querySelectorAll('aside a').forEach(a=>a.classList.toggle('on',a.dataset.k==k));side.classList.remove('open');
- const a=document.querySelector(`aside a[data-k="${k}"]`);ttl.textContent=a?a.textContent:'';V[k]()}
+ const a=document.querySelector(`aside a[data-k="${k}"]`);ttl.textContent=a?a.textContent:'';Promise.resolve(V[k]()).then(fillBio)}
 function F(a){return a.map(([k,l,o])=>o&&o!='date'&&o!='number'&&o!='email'?`<select id="f_${k}"><option value="">${l}</option>${o.split(',').map(x=>`<option>${x}</option>`).join('')}</select>`:`<input id="f_${k}" type="${o||'text'}" placeholder="${l}">`).join('')}
 const G=()=>Object.fromEntries([...document.querySelectorAll('[id^=f_]')].map(e=>[e.id.slice(2),e.value.trim()]));
 function snap(i){const f=i.files[0];if(!f)return;const im=new Image();im.onload=()=>{const c=document.createElement('canvas');c.width=c.height=240;const x=c.getContext('2d');x.filter='brightness(1.08) contrast(1.05) saturate(1.1)';const m=Math.min(im.width,im.height);x.drawImage(im,(im.width-m)/2,(im.height-m)/2,m,m,0,0,240,240);photo=c.toDataURL('image/jpeg',.8);$('#pv').src=photo};im.src=URL.createObjectURL(f)}
@@ -175,6 +175,7 @@ async mgmt(){
  set(`<div class="grid"><div class="card stat"><span>Students</span><b>${s.length}</b></div><div class="card stat"><span>Staff</span><b>${t.length}</b></div><div class="card stat"><span>Staff present today</span><b class="green">${n.filter(x=>x.status=='Present').length}</b></div></div>
  <div class="card"><h3>Students</h3><table><tr><th>ID</th><th>Name</th><th>Class</th><th>Campus</th><th></th></tr>${s.map(x=>`<tr><td>${esc(x.regNo)}</td><td>${esc(x.surname)} ${esc(x.firstName)}</td><td>${esc(x.class)}</td><td>${esc(x.campus)}</td><td><button class="g" onclick="studentDash('${x.id}')">Open</button></td></tr>`).join('')}</table></div>`)},
 reg(){photo='';set(`<div class="card"><h3>Student Registration</h3><div class="grid">${F([['surname','Surname'],['firstName','First name'],['middleName','Middle name'],['gender','Gender','Male,Female'],['dob','Date of birth','date'],['pob','Place of birth'],['nationality','Nationality'],['state','State of origin'],['lga','LGA'],['address','Residential address'],['phone','Phone'],['email','Student email (optional)','email'],['indigene','Status','Indigene,Non-Indigene'],['level','Section','Creche,Nursery,Primary,High School'],['class','Class'],['session','Session (2026/2027)'],['campus','Campus','Ediam,Ikot Oso'],['boarding','Boarding?','Day,Boarding'],['father','Father name'],['fatherPhone','Father phone'],['mother','Mother name'],['motherPhone','Mother phone'],['guardianEmail','Parent email (REQUIRED - used for password setup and recovery)','email'],['emName','Emergency contact'],['emPhone','Emergency phone'],['blood','Blood group'],['genotype','Genotype'],['allergies','Allergies'],['feeDue','Total fees due (₦)','number']])}</div>
+ <p><b>Biometric ID</b> <small>(auto-numbered. Enrol this number on the fingerprint scanner so attendance can be taken)</small></p><input id="f_bioId" type="number">
  <p>Passport photo:</p><input type="file" accept="image/*" capture="user" onchange="snap(this)"><img id="pv" class="pic"><br><button onclick="regStudent()">Register & Create Account</button><p id="rmsg"></p></div>`)},
 async bread(){
  const d=(await list('bread_days')).sort((a,b)=>a.date>b.date?1:-1);let open=0;
@@ -185,6 +186,7 @@ async notes(){
  const n=(await list('notifications')).sort((a,b)=>b.at-a.at).slice(0,50);
  set(n.map(x=>`<div class="card">${esc(x.msg)}<br><small>${new Date(x.at).toLocaleString()}</small></div>`).join('')||'<div class="card">Nothing yet.</div>')},
 staffreg(){photo='';set(`<div class="card"><h3>Add Staff / Role</h3>${F([['name','Full name'],['username','Username / Staff ID'],['email','Staff email (for password recovery)','email'],['password','Temporary password (min 6 characters)'],['role','Role','teacher,staff,principal,accountant,confectionery,admin'],['position','Position'],['department','Department'],['campus','Campus','Ediam,Ikot Oso'],['salary','Basic salary','number']])}
+ <p><b>Biometric ID</b> <small>(auto-numbered. Enrol this number on the fingerprint scanner so attendance can be taken)</small></p><input id="f_bioId" type="number">
  <p>Staff photo:</p><input type="file" accept="image/*" capture="user" onchange="snap(this)"><img id="pv" class="pic"><br><button onclick="addStaff()">Create Staff</button><p id="rmsg"></p></div>`)},
 async stat(){
  const s=await list('stationery');
@@ -192,6 +194,13 @@ async stat(){
 reset(){
  if(!TOP.includes(me.role))return;
  set(`<div class="card"><h3 class="red">Reset (Proprietor/Admin only)</h3><select id="rc"><option>announcements</option><option>results</option><option>attendance</option><option>fees</option><option>bread_days</option><option>notifications</option></select><button class="s" onclick="doReset()">Reset selected section</button></div>`)},
+async roll(){
+ const tc=me.role==='teacher';
+ set(`<div class="card"><h3>Take Attendance</h3>${tc?'':'<select id="r_k" onchange="loadRoll()"><option value="student">Students</option><option value="staff">Staff</option></select>'}
+ <input id="r_d" type="date" value="${today()}" onchange="loadRoll()"><input id="r_f" placeholder="Filter by name or class" oninput="drawRoll()">
+ <input id="r_id" placeholder="Scan or type Biometric ID, then press Enter" onkeydown="if(event.key==='Enter'){scanId(this.value);this.value=''}">
+ <p id="r_msg"></p><details><summary>Import fingerprint device log (CSV)</summary><textarea id="r_csv" rows="4" placeholder="One per line: ID,2026-10-16 07:45"></textarea><button class="g" onclick="importLog()">Import</button></details></div><div class="card" id="r_list">Loading...</div>`);
+ loadRoll()},
 async fees(){
  const[st,fs]=await Promise.all([list('students'),list('fees')]);
  st.sort((a,b)=>(a.surname||'').localeCompare(b.surname||''));fs.sort((a,b)=>b.at-a.at);
@@ -258,7 +267,7 @@ async function clock(){
  if(bioGet(me.uid)){try{await verifyBio(me.uid)}catch(e){return alert('Fingerprint check failed or was cancelled. Attendance not recorded.')}}
  const n=new Date(),hm=n.toTimeString().slice(0,5),st=hm<='08:00'?'Present':'Absent';
  try{
-  await db.doc('attendance/'+today()+'_'+me.uid).set({uid:me.uid,name:me.name,date:today(),time:hm,status:st,fine:st=='Absent'?1000:0});
+  await db.doc('attendance/'+today()+'_'+me.uid).set({uid:me.uid,name:me.name,kind:'staff',date:today(),time:hm,status:st,fine:st=='Absent'?1000:0});
   await notify(`${me.name} marked ${st} at ${hm}`);
  }catch(e){alert('Could not record attendance: '+(e.code||e.message))}
  go('attend')}
@@ -283,6 +292,51 @@ async function doReset(){
  const docs=(await db.collection(c).get()).docs;
  for(let i=0;i<docs.length;i+=400){const b=db.batch();docs.slice(i,i+400).forEach(d=>b.delete(d.ref));await b.commit()}
  alert('Reset done')}
+let ROLL={kind:'student',d:'',ppl:[],rec:{}};
+const nextBio=async()=>{const[a,b]=await Promise.all([list('students'),list('staff')]);return Math.max(0,...[...a,...b].map(x=>parseInt(x.bioId)||0))+1};
+function fillBio(){const e=$('#f_bioId');if(e&&!e.value)nextBio().then(n=>e.value=n).catch(()=>{})}
+async function loadRoll(){
+ const kind=v('r_k')||'student',d=v('r_d')||today(),tc=me.role==='teacher',f=[['date','==',d]];
+ if(tc)f.push(['kind','==','student']);
+ try{
+  const[pp,rc]=await Promise.all([list(kind=='staff'?'staff':'students'),list('attendance',...f)]);
+  ROLL={kind,d,ppl:pp.map(x=>kind=='staff'?{id:x.id,name:x.name,cls:x.position||'',bio:x.bioId}:{id:x.id,name:(x.surname||'')+' '+(x.firstName||''),cls:x.class||'',bio:x.bioId}).sort((a,b)=>a.name.localeCompare(b.name)),rec:{}};
+  rc.forEach(r=>ROLL.rec[r.uid]=r);drawRoll();
+ }catch(e){$('#r_list').textContent='Could not load: '+(e.code||e.message)}}
+function drawRoll(){
+ const q=(v('r_f')||'').toLowerCase(),st=ROLL.kind=='student',mg=me.role!=='teacher',n=x=>ROLL.ppl.filter(p=>(ROLL.rec[p.id]||{}).status===x).length;
+ const rows=ROLL.ppl.filter(p=>(p.name+' '+p.cls).toLowerCase().includes(q));
+ $('#r_list').innerHTML=`<p><b>${ROLL.ppl.length}</b> listed · <span class="green">${n('Present')} present</span> · ${n('Late')} late · <span class="red">${n('Absent')} absent</span> · ${ROLL.ppl.length-n('Present')-n('Late')-n('Absent')} not marked</p><button class="g" onclick="markRest()">Mark unmarked as Absent</button>
+ <table><tr><th>Name</th><th>${st?'Class':'Position'}</th><th>Bio ID</th><th>Status</th><th>Time</th><th></th></tr>${rows.map(p=>{const r=ROLL.rec[p.id];return`<tr><td>${esc(p.name)}</td><td>${esc(p.cls)}</td><td>${p.bio?esc(p.bio):(mg?`<input id="bi_${p.id}" style="width:70px;margin:0" placeholder="ID"><button class="g" onclick="setBio('${p.id}')">Set</button>`:'-')}</td><td class="${r?(r.status=='Absent'?'red':'green'):''}">${r?esc(r.status):'-'}</td><td>${r?esc(r.time||''):''}</td><td><button class="g" onclick="markAtt('${p.id}','Present').then(drawRoll)">Present</button> ${st?`<button class="g" onclick="markAtt('${p.id}','Late').then(drawRoll)">Late</button> `:''}<button class="g" onclick="markAtt('${p.id}','Absent').then(drawRoll)">Absent</button></td></tr>`}).join('')}</table>`}
+async function markAtt(uid,status,time){
+ const p=ROLL.ppl.find(x=>x.id===uid);if(!p)return;
+ const rec={uid,name:p.name,kind:ROLL.kind,date:ROLL.d,time:time||(status=='Absent'?'-':new Date().toTimeString().slice(0,5)),status,fine:ROLL.kind=='staff'&&status=='Absent'?1000:0,markedBy:me.name,by:me.uid,at:Date.now()};
+ try{await db.doc('attendance/'+ROLL.d+'_'+uid).set(rec);ROLL.rec[uid]=rec}catch(e){alert('Could not save: '+(e.code||e.message))}}
+function autoStatus(t){return ROLL.kind=='staff'?(t<='08:00'?'Present':'Absent'):(t<='08:00'?'Present':'Late')}
+async function scanId(id){
+ const m=$('#r_msg');id=String(id).trim();if(!id)return;
+ const p=ROLL.ppl.find(x=>String(x.bio)===id);
+ if(!p){m.className='red';m.textContent='ID '+id+' not found in this list.';return}
+ if(ROLL.rec[p.id]&&ROLL.rec[p.id].status!='Absent'){m.className='red';m.textContent=p.name+' is already marked '+ROLL.rec[p.id].status+' at '+ROLL.rec[p.id].time+'.';return}
+ const t=new Date().toTimeString().slice(0,5),st=autoStatus(t);
+ await markAtt(p.id,st,t);m.className=st=='Absent'?'red':'green';m.textContent=p.name+' marked '+st+' at '+t;drawRoll()}
+async function importLog(){
+ const first={};let bad=0;
+ v('r_csv').split('\n').forEach(l=>{const m=l.match(/^\s*(\d+)\s*[,;\t ]\s*(?:(\d{4}-\d{2}-\d{2})[ T])?(\d{1,2}):(\d{2})/);if(!m||(m[2]&&m[2]!=ROLL.d)){if(l.trim())bad++;return}
+  const t=m[3].padStart(2,'0')+':'+m[4];if(!first[m[1]]||t<first[m[1]])first[m[1]]=t});
+ let ok=0,miss=0;
+ await Promise.all(Object.entries(first).map(async([id,t])=>{const p=ROLL.ppl.find(x=>String(x.bio)===id);if(!p){miss++;return}
+  if(ROLL.rec[p.id]&&ROLL.rec[p.id].status!='Absent')return;await markAtt(p.id,autoStatus(t),t);ok++}));
+ const m=$('#r_msg');m.className='green';m.textContent=`Imported ${ok}. Unknown IDs: ${miss}. Lines skipped (bad format or other date): ${bad}.`;drawRoll()}
+async function markRest(){
+ const todo=ROLL.ppl.filter(p=>!ROLL.rec[p.id]);
+ if(!todo.length)return alert('Everyone is already marked.');
+ if(!confirm('Mark '+todo.length+' unmarked people as Absent for '+ROLL.d+'?'))return;
+ await Promise.all(todo.map(p=>markAtt(p.id,'Absent','-')));drawRoll()}
+async function setBio(uid){
+ const val=v('bi_'+uid).trim();if(!val)return;
+ if(ROLL.ppl.some(x=>String(x.bio)===val))return alert('That Biometric ID is already used.');
+ try{await db.doc((ROLL.kind=='staff'?'staff/':'students/')+uid).update({bioId:val});ROLL.ppl.find(x=>x.id===uid).bio=val;drawRoll()}catch(e){alert('Could not save: '+(e.code||e.message))}}
 function feeInfo(){const s=FEE.st.find(x=>x.id===v('fee_s')),i=$('#fee_info');if(!s){i.innerHTML='';return}const pd=FEE.paid[s.id]||0,b=(+s.feeDue||0)-pd;i.innerHTML=`Fee due <b>${money(s.feeDue)}</b> · Paid <b>${money(pd)}</b> · Balance <b class="${b>0?'red':'green'}">${money(Math.max(b,0))}</b>`}
 async function saveFee(){
  const sid=v('fee_s'),a=+v('fee_a');
@@ -299,10 +353,10 @@ async function saveFee(){
 async function voidFee(id){if(!confirm('Void (delete) this payment record?'))return;await db.doc('fees/'+id).delete();await notify('A payment record was voided by '+me.name);go('fees')}
 async function postComment(id){if(!v('cm').trim())return;await add('comments',{studentId:id,text:v('cm').trim()});studentDash(id)}
 async function studentDash(id){
- const[s,r,f,c]=await Promise.all([db.doc('students/'+id).get().then(d=>d.data()||{}),list('results',['studentId','==',id],['published','==',true]),list('fees',['studentId','==',id]),list('comments',['studentId','==',id])]);
+ const[s,r,f,c,at]=await Promise.all([db.doc('students/'+id).get().then(d=>d.data()||{}),list('results',['studentId','==',id],['published','==',true]),list('fees',['studentId','==',id]),list('comments',['studentId','==',id]),list('attendance',['uid','==',id])]);
  const tot=r.map(x=>x.test+x.exam),paid=f.reduce((a,x)=>a+(+x.amount||0),0),due=+s.feeDue||0,fit=paid>=due;
  set(`<div class="grid" style="grid-template-columns:minmax(260px,320px) 1fr;align-items:start"><div class="card" style="text-align:center"><img class="pic" style="width:170px;height:170px" src="${esc(s.photo||'')}"><h2>${esc((s.surname||'')+' '+(s.firstName||''))}</h2><p style="color:var(--mut)">ID: ${esc(s.regNo||'')} · ${esc(s.class||'')} · ${esc(s.campus||'')}</p>
- <div class="grid"><div class="stat"><b>${money(paid)}</b><span>Paid</span></div><div class="stat"><b>${money(Math.max(due-paid,0))}</b><span>Balance</span></div><div class="stat"><b class="${fit?'green':'red'}">${fit?'Fit':'Owing'}</b><span>Class status</span></div></div></div>
+ <div class="grid"><div class="stat"><b>${money(paid)}</b><span>Paid</span></div><div class="stat"><b>${money(Math.max(due-paid,0))}</b><span>Balance</span></div><div class="stat"><b class="${fit?'green':'red'}">${fit?'Fit':'Owing'}</b><span>Class status</span></div><div class="stat"><b>${at.filter(a=>a.status!='Absent').length}/${at.length}</b><span>Days attended</span></div></div></div>
  <div><div class="card"><h3>Academic Results ${tot.length?`<small>(High ${Math.max(...tot)} · Low ${Math.min(...tot)})</small>`:''}</h3><table><tr><th>Subject</th><th>Trimester</th><th>Test</th><th>Exam</th><th>Total</th></tr>${r.map(x=>{const t=x.test+x.exam;return`<tr><td>${esc(x.subject)}</td><td>${esc(x.trimester)}</td><td>${x.test}</td><td>${x.exam}</td><td class="${t<50?'red':'green'}">${t}</td></tr>`}).join('')||'<tr><td>Results not yet released.</td></tr>'}</table></div>
  <div class="card"><h3>Payments</h3><table>${f.map(x=>`<tr><td>${new Date(x.at).toLocaleDateString()}</td><td>${esc(x.type)}</td><td>${esc(x.trimester||'')}</td><td>${money(x.amount)}</td><td><button class="g" onclick="receipt('${x.id}')">Receipt</button></td></tr>`).join('')}</table></div>
  <div class="card"><h3>Comments</h3>${c.map(x=>`<p><b>${esc(x.byName)}</b>: ${esc(x.text)}</p>`).join('')}<input id="cm" placeholder="Write a comment"><button onclick="postComment('${id}')">Post</button></div></div></div>`)}
