@@ -7,13 +7,15 @@
 :root{--bg:#f3f6fb;--card:#fff;--tx:#10213f;--mut:#6b7a96;--pri:#1c3f94;--acc:#e0147a;--gold:#f5b700;--side:#10213f;--ok:#12a150;--bad:#e5313d;--bd:#e3e9f4}
 body.student{--bg:#0e1a2e;--card:#16253d;--tx:#eef2fa;--mut:#9fb0cc;--bd:#243656;--side:#0a1424;--pri:#e8c77a}
 *{box-sizing:border-box}body{margin:0;font-family:Inter,Segoe UI,Arial,sans-serif;background:var(--bg);color:var(--tx)}
-#login{min-height:100vh;display:grid;place-items:center;background:linear-gradient(135deg,#10213f,#1c3f94 60%,#e0147a);padding:16px}
+#loginBox{min-height:100vh;display:grid;place-items:center;background:linear-gradient(135deg,#10213f,#1c3f94 60%,#e0147a);padding:16px}
 .lbox{background:#fff;color:#10213f;border-radius:20px;padding:32px;width:min(400px,100%);text-align:center;box-shadow:0 20px 60px #0006}
 .lbox img{width:130px;height:130px;object-fit:contain;display:block;margin:0 auto 10px}.lbox small{color:#e0147a;font-weight:600}
 input,select,textarea,button{font:inherit;padding:10px 12px;border-radius:10px;border:1px solid var(--bd);width:100%;margin:5px 0;background:var(--card);color:var(--tx)}
+.lbox input{background:#fff;color:#10213f}
 button{background:var(--pri);color:#fff;border:0;cursor:pointer;font-weight:600;width:auto}body.student button{color:#10213f}
 button.s{background:var(--acc);color:#fff}button.g{background:transparent;color:var(--pri);border:1px solid var(--pri)}
-#app{display:none;grid-template-columns:240px 1fr;min-height:100vh}
+.flink{display:block;margin-top:8px;font-size:13px;color:#1c3f94;cursor:pointer;text-decoration:underline}
+#appBox{display:none;grid-template-columns:240px 1fr;min-height:100vh}
 aside{background:var(--side);color:#fff;padding:16px;position:sticky;top:0;height:100vh;overflow:auto}
 aside img{width:70px;height:70px;object-fit:contain;display:block;margin:0 auto 6px}aside h4{text-align:center;margin:0 0 14px;font-size:13px;color:var(--gold)}
 aside a{display:block;padding:10px 12px;border-radius:10px;color:#cfd9ee;cursor:pointer;margin:2px 0}aside a:hover,aside a.on{background:#ffffff22;color:#fff}
@@ -24,184 +26,288 @@ main{padding:20px;overflow:hidden}.top{display:flex;justify-content:space-betwee
 table{width:100%;border-collapse:collapse;font-size:14px;display:block;overflow-x:auto}td,th{padding:8px;border-bottom:1px solid var(--bd);text-align:left;white-space:nowrap}
 .red{color:var(--bad);font-weight:700}.green{color:var(--ok);font-weight:700}.tag{padding:3px 10px;border-radius:20px;font-size:12px;color:#fff}
 #menu{display:none}
-@media(max-width:800px){#app{grid-template-columns:1fr}aside{position:fixed;left:-260px;width:240px;z-index:9;transition:.2s}aside.open{left:0}#menu{display:inline-block}}
+@media(max-width:800px){#appBox{grid-template-columns:1fr}aside{position:fixed;left:-260px;width:240px;z-index:9;transition:.2s}aside.open{left:0}#menu{display:inline-block}}
 </style></head><body>
-<div id="login"><div class="lbox"><img src="./logo.png" alt="Divine Seeds International Schools logo" onerror="this.style.display='none'"><h2>DIVINE SEEDS INTERNATIONAL EKET</h2><small>Training Godly Future Champions</small><br><br>
-<input id="u" placeholder="Username / ID"><input id="p" type="password" placeholder="Password"><button onclick="login()" style="width:100%">Sign in</button>
-<button class="g" onclick="bio()" style="width:100%">Sign in with Fingerprint</button><p id="err" class="red"></p></div></div>
-<div id="app"><aside id="side"></aside><main><div class="top"><button id="menu" onclick="side.classList.toggle('open')">☰</button><h2 id="ttl"></h2><div><span id="bell" style="cursor:pointer" onclick="go('notes')">🔔</span> <button class="g" onclick="auth.signOut()">Logout</button></div></div><div id="main"></div></main></div>
+<div id="loginBox"><div class="lbox"><img src="" id="lg" alt="Divine Seeds International Schools logo" onerror="this.style.display='none'"><h2>DIVINE SEEDS INTERNATIONAL EKET</h2><small>Training Godly Future Champions</small><br><br>
+<input id="u" placeholder="Username / ID or email" autocomplete="username"><input id="p" type="password" placeholder="Password" autocomplete="current-password" onkeydown="if(event.key==='Enter')login()">
+<button onclick="login()" style="width:100%">Sign in</button>
+<button class="g" onclick="bio()" style="width:100%">Sign in with Fingerprint</button>
+<a class="flink" onclick="forgot()">Forgot password?</a>
+<p id="info" class="green"></p><p id="err" class="red"></p></div></div>
+<div id="appBox"><aside id="side"></aside><main><div class="top"><button id="menu" onclick="side.classList.toggle('open')">☰</button><h2 id="ttl"></h2><div><span id="bell" style="cursor:pointer" onclick="go('notes')">🔔</span> <button class="g" id="lockBtn" onclick="lock()" style="display:none">🔒 Lock</button> <button class="g" onclick="auth.signOut()">Logout</button></div></div><div id="main"></div></main></div>
 <script>
-const LOGO_URL="./logo.png";
+const LOGO_URL="./logo.png"; // logo.png must sit in the same folder as this page (GitHub Pages)
+const CFG={apiKey:"AIzaSyDLryqwFI885uE0xQzSUN2Qo0MZZoDxVm0",authDomain:"divine-seeds-portal.firebaseapp.com",projectId:"divine-seeds-portal",storageBucket:"divine-seeds-portal.firebasestorage.app",messagingSenderId:"151651524541",appId:"1:151651524541:web:cd28e4cefe26d72f6a7cd4"};
+firebase.initializeApp(CFG);
+const auth=firebase.auth(),db=firebase.firestore();
+const $=s=>document.querySelector(s),v=id=>{const e=document.getElementById(id);return e?e.value:''};
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const money=n=>'₦'+Number(n||0).toLocaleString(),today=()=>new Date().toISOString().slice(0,10);
+const FAKE='@divineseeds.app',TOP=['proprietor','admin'],MG=['proprietor','admin','principal'];
+let me,photo='',FEE={st:[],paid:{}};
+const loginBox=$('#loginBox'),appBox=$('#appBox'),side=$('#side'),err=$('#err'),info=$('#info'),ttl=$('#ttl'),mainEl=$('#main');
+$('#lg').src=LOGO_URL;
+// Apps Script runs pages in a sandboxed iframe, so fall back if browser storage is blocked
+const P=firebase.auth.Auth.Persistence;const ready=(async()=>{for(const m of [P.LOCAL,P.SESSION,P.NONE]){try{await auth.setPersistence(m);return}catch(e){}}})();
 
-const CFG = {
-  apiKey: "AIzaSyDLryqwFI885uE0xQzSUN2Qo0MZZoDxVm0",
-  authDomain: "divine-seeds-portal.firebaseapp.com",
-  projectId: "divine-seeds-portal",
-  storageBucket: "divine-seeds-portal.firebasestorage.app",
-  messagingSenderId: "151651524541",
-  appId: "1:151651524541:web:cd28e4cefe26d72f6a7cd4"
+const MENU={student:['dash:Dashboard','news:Announcements','acct:My Account'],
+teacher:['dash:My Dashboard','scores:Enter Scores','attend:Attendance','news:Announcements','acct:My Account'],
+staff:['dash:My Dashboard','attend:Attendance','news:Announcements','acct:My Account'],
+accountant:['fees:Fees & Payments','dash:My Dashboard','attend:Attendance','news:Announcements','acct:My Account'],
+confectionery:['dash:My Dashboard','bread:Confectionery','attend:Attendance','news:Announcements','acct:My Account'],
+principal:['mgmt:Overview','reg:Registration','fees:Fees & Payments','news:Post Announcement','pub:Validate Results','attend:Attendance','bread:Confectionery','notes:Notifications','acct:My Account']};
+MENU.proprietor=MENU.admin=[...MENU.principal,'staffreg:Staff & Roles','stat:Stationery','reset:Reset'];
+
+let unlocked=false;
+const bioKey=uid=>'dsbio_'+uid,bioGet=uid=>{try{return localStorage.getItem(bioKey(uid))}catch(e){return null}},
+ bioSet=(uid,val)=>{try{val?localStorage.setItem(bioKey(uid),val):localStorage.removeItem(bioKey(uid))}catch(e){}},
+ bioOK=()=>!!(window.PublicKeyCredential&&navigator.credentials),
+ b64=b=>btoa(String.fromCharCode(...new Uint8Array(b))),unb64=x=>Uint8Array.from(atob(x),c=>c.charCodeAt(0));
+auth.onAuthStateChanged(async user=>{
+  if(!user){unlocked=false;loginBox.style.display='grid';appBox.style.display='none';return}
+  if(bioGet(user.uid)&&!unlocked){showLock();return}
+  unlocked=true;await enter(user);
+});
+async function enter(user){
+  try{
+    const d=await db.doc('users/'+user.uid).get();
+    if(!d.exists){err.textContent='Signed in, but no role profile was found. In Firestore, create users/'+user.uid+' with role and name fields.';await auth.signOut();return}
+    me={uid:user.uid,...d.data()};
+    if(!me.role){err.textContent='Your Firestore users profile is missing the role field.';await auth.signOut();return}
+    loginBox.style.display='none';appBox.style.display='grid';
+    document.body.className=me.role==='student'?'student':'';
+    $('#bell').style.display=MG.includes(me.role)?'inline':'none';
+    $('#lockBtn').style.display=bioGet(user.uid)?'inline':'none';
+    const m=MENU[me.role]||MENU.staff;
+    side.innerHTML=`<img src="${esc(LOGO_URL)}" alt="Divine Seeds logo" onerror="this.style.display='none'"><h4>DIVINE SEEDS</h4>`+m.map(i=>{const[k,l]=i.split(':');return`<a data-k="${k}" onclick="go('${k}')">${l}</a>`}).join('');
+    go(m[0].split(':')[0]);
+  }catch(e){console.error('Profile load failed:',e.code,e.message);err.textContent='Signed in, but could not read your Firestore profile. Check Firestore rules and the users document.';await auth.signOut()}
+}
+
+// ---------- Login, recovery ----------
+async function resolveEmail(x){
+  x=x.trim().toLowerCase();
+  if(x.includes('@'))return x;
+  try{const d=await db.doc('usernames/'+x).get();if(d.exists&&d.data().email)return d.data().email}catch(e){console.warn('username lookup failed',e.code)}
+  return x+FAKE; // older accounts
+}
+async function login(){
+  err.textContent='';info.textContent='';
+  const pw=v('p');
+  if(!v('u').trim()||!pw){err.textContent='Enter your username and password.';return}
+  await ready;
+  const email=await resolveEmail(v('u'));
+  unlocked=true;
+  try{await auth.signInWithEmailAndPassword(email,pw)}catch(e){
+    unlocked=false;
+    console.error('Sign-in failed:',e.code,e.message);
+    const M={'auth/invalid-email':'The username/email format is invalid.','auth/invalid-credential':'The username or password is incorrect. Use "Forgot password?" to reset it.','auth/wrong-password':'The password is incorrect. Use "Forgot password?" to reset it.','auth/user-not-found':'No account matches this username.','auth/too-many-requests':'Too many attempts. Wait a while, or reset your password.','auth/operation-not-allowed':'Email/password sign-in is disabled in Firebase Authentication.','auth/network-request-failed':'Network error. Check your internet connection.','auth/unauthorized-domain':'This site domain is not authorized in Firebase Authentication → Settings → Authorized domains.'};
+    err.textContent=M[e.code]||('Login failed: '+(e.code||'unknown error'));
+  }
+}
+async function forgot(){
+  err.textContent='';info.textContent='';
+  if(!v('u').trim()){err.textContent='Type your username (or email) above first, then tap Forgot password.';return}
+  const email=await resolveEmail(v('u'));
+  if(email.endsWith(FAKE)){err.textContent='No recovery email is saved for this account. Please contact the school office.';return}
+  try{await auth.sendPasswordResetEmail(email)}catch(e){if(e.code!=='auth/user-not-found'){err.textContent='Could not send reset email: '+e.code;return}}
+  info.textContent='If this account has a recovery email, a reset link has been sent. Check your inbox and spam folder.';
+}
+function showLock(){appBox.style.display='none';loginBox.style.display='grid';err.textContent='';info.textContent='Locked. Tap "Sign in with Fingerprint" to continue.'}
+function lock(){unlocked=false;showLock()}
+async function bio(){
+ err.textContent='';info.textContent='';
+ if(!bioOK()){err.textContent='This browser/device does not support fingerprint sign-in. Use your password.';return}
+ const u=auth.currentUser;
+ if(!u||!bioGet(u.uid)){err.textContent='Fingerprint is not ready on this device. Sign in with your password, enable fingerprint in My Account, then use the Lock button (not Logout) when you leave.';return}
+ try{await verifyBio(u.uid);unlocked=true;await enter(u)}catch(e){console.warn(e);err.textContent='Fingerprint not recognised or cancelled. Try again or use your password.'}}
+async function verifyBio(uid){
+ const id=bioGet(uid);if(!id)throw new Error('not enrolled');
+ await navigator.credentials.get({publicKey:{challenge:crypto.getRandomValues(new Uint8Array(32)),allowCredentials:[{type:'public-key',id:unb64(id),transports:['internal']}],userVerification:'required',timeout:60000}})}
+async function enableBio(){
+ const m=$('#bmsg');m.className='red';
+ if(!bioOK()){m.textContent='This browser/device does not support fingerprint sign-in.';return}
+ try{
+  if(!(await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable())){m.textContent='No fingerprint or screen-lock biometric is set up on this device.';return}
+  const c=await navigator.credentials.create({publicKey:{challenge:crypto.getRandomValues(new Uint8Array(32)),rp:{name:'Divine Seeds Portal'},user:{id:new TextEncoder().encode(me.uid),name:me.username||me.name,displayName:me.name},pubKeyCredParams:[{type:'public-key',alg:-7},{type:'public-key',alg:-257}],authenticatorSelection:{authenticatorAttachment:'platform',userVerification:'required'},timeout:60000}});
+  bioSet(me.uid,b64(c.rawId));$('#lockBtn').style.display='inline';V.acct();
+ }catch(e){m.textContent='Could not enable fingerprint ('+(e.name||e.message)+'). If the portal is opened inside Apps Script, the browser may block it; use the GitHub Pages link.'}}
+function disableBio(){bioSet(me.uid,null);$('#lockBtn').style.display='none';V.acct()}
+
+// ---------- Helpers ----------
+const add=(c,o)=>db.collection(c).add({...o,by:me.uid,byName:me.name,at:Date.now()});
+const list=async(c,...f)=>{let q=db.collection(c);f.forEach(x=>q=q.where(...x));return(await q.get()).docs.map(d=>({id:d.id,...d.data()}))};
+const notify=m=>add('notifications',{msg:m,to:MG});
+const set=h=>mainEl.innerHTML=h;
+function go(k){document.querySelectorAll('aside a').forEach(a=>a.classList.toggle('on',a.dataset.k==k));side.classList.remove('open');
+ const a=document.querySelector(`aside a[data-k="${k}"]`);ttl.textContent=a?a.textContent:'';V[k]()}
+function F(a){return a.map(([k,l,o])=>o&&o!='date'&&o!='number'&&o!='email'?`<select id="f_${k}"><option value="">${l}</option>${o.split(',').map(x=>`<option>${x}</option>`).join('')}</select>`:`<input id="f_${k}" type="${o||'text'}" placeholder="${l}">`).join('')}
+const G=()=>Object.fromEntries([...document.querySelectorAll('[id^=f_]')].map(e=>[e.id.slice(2),e.value.trim()]));
+function snap(i){const f=i.files[0];if(!f)return;const im=new Image();im.onload=()=>{const c=document.createElement('canvas');c.width=c.height=240;const x=c.getContext('2d');x.filter='brightness(1.08) contrast(1.05) saturate(1.1)';const m=Math.min(im.width,im.height);x.drawImage(im,(im.width-m)/2,(im.height-m)/2,m,m,0,0,240,240);photo=c.toDataURL('image/jpeg',.8);$('#pv').src=photo};im.src=URL.createObjectURL(f)}
+
+// ---------- Views ----------
+const V={
+async dash(){
+ if(me.role=='student')return studentDash(me.uid);
+ const s=(await db.doc('staff/'+me.uid).get()).data()||{};
+ const at=await list('attendance',['uid','==',me.uid]),ab=at.filter(a=>a.status=='Absent').length;
+ set(`<div class="card hero"><img class="pic" src="${esc(s.photo||'')}"><div><h2>${esc(me.name)}</h2><p>${esc(s.position||me.role)} · ${esc(s.department||'')}<br>ID: ${esc(s.staffId||'')} · ${esc(s.campus||'')}</p></div></div>
+ <div class="grid"><div class="card stat"><span>Basic Salary</span><b>${money(s.salary)}</b></div><div class="card stat"><span>Fines (₦1,000/absence)</span><b class="red">${money(ab*1000)}</b></div><div class="card stat"><span>Net Pay</span><b class="green">${money((s.salary||0)-ab*1000)}</b></div><div class="card stat"><span>Days Present</span><b>${at.length-ab}</b></div></div>
+ <div class="card"><h3>Attendance Record</h3><table><tr><th>Date</th><th>Time</th><th>Status</th></tr>${at.map(a=>`<tr><td>${esc(a.date)}</td><td>${esc(a.time||'-')}</td><td class="${a.status=='Present'?'green':'red'}">${esc(a.status)}</td></tr>`).join('')}</table></div>`)},
+async news(){
+ const mg=MG.includes(me.role),a=(await list('announcements',...(mg?[]:[['audience','==',me.role=='student'?'students':'staff']]))).sort((x,y)=>y.at-x.at);
+ set((mg?`<div class="card"><h3>Post Announcement</h3><select id="aud"><option value="students">Students</option><option value="staff">Teachers & Staff</option></select><input id="ann_t" placeholder="Title"><textarea id="ann_b" placeholder="Message"></textarea><button onclick="postNews()">Publish</button></div>`:'')+
+ (a.map(x=>`<div class="card"><b>${esc(x.title)}</b> <span class="tag" style="background:var(--acc)">${esc(x.audience)}</span><p>${esc(x.body)}</p><small>${esc(x.byName)} · ${new Date(x.at).toLocaleString()}</small></div>`).join('')||'<div class="card">No announcements yet.</div>'))},
+async attend(){
+ const ex=await db.doc('attendance/'+today()+'_'+me.uid).get();
+ set(`<div class="card"><h3>Working-hours Attendance (Staff)</h3><p>Clock in before <b>08:00</b> to be Present. Later or no clock-in = Absent and a ₦1,000 fine.</p>
+ ${ex.exists?`<p class="green">Recorded: ${esc(ex.data().status)} at ${esc(ex.data().time)}</p>`:`<button onclick="clock()">👆 Fingerprint Clock-In</button>${bioGet(me.uid)?'':'<p><small>Tip: enable fingerprint in My Account to require a fingerprint check here.</small></p>'}`}</div>`)},
+async scores(){
+ const st=(await list('students')).sort((a,b)=>(a.surname||'').localeCompare(b.surname||''));
+ set(`<div class="card"><h3>Enter Scores</h3><select id="sid">${st.map(s=>`<option value="${s.id}">${esc(s.surname)} ${esc(s.firstName)} (${esc(s.class)})</option>`).join('')}</select>
+ <input id="sub" placeholder="Subject"><select id="tri"><option>1st Trimester</option><option>2nd Trimester</option><option>3rd Trimester</option></select>
+ <input id="tst" type="number" placeholder="Test score (40)"><input id="exm" type="number" placeholder="Exam score (60)"><button onclick="saveScore()">Submit</button></div>`)},
+async pub(){
+ const r=await list('results',['published','==',false]);
+ set(`<div class="card"><h3>Results awaiting validation</h3><table><tr><th>Student</th><th>Subject</th><th>Trimester</th><th>Total</th><th></th></tr>${r.map(x=>`<tr><td>${esc(x.studentName)}</td><td>${esc(x.subject)}</td><td>${esc(x.trimester)}</td><td>${x.test+x.exam}</td><td><button onclick="publish('${x.id}')">Validate</button></td></tr>`).join('')}</table></div>`)},
+async mgmt(){
+ const[s,t,n]=await Promise.all([list('students'),list('staff'),list('attendance',['date','==',today()])]);
+ set(`<div class="grid"><div class="card stat"><span>Students</span><b>${s.length}</b></div><div class="card stat"><span>Staff</span><b>${t.length}</b></div><div class="card stat"><span>Staff present today</span><b class="green">${n.filter(x=>x.status=='Present').length}</b></div></div>
+ <div class="card"><h3>Students</h3><table><tr><th>ID</th><th>Name</th><th>Class</th><th>Campus</th><th></th></tr>${s.map(x=>`<tr><td>${esc(x.regNo)}</td><td>${esc(x.surname)} ${esc(x.firstName)}</td><td>${esc(x.class)}</td><td>${esc(x.campus)}</td><td><button class="g" onclick="studentDash('${x.id}')">Open</button></td></tr>`).join('')}</table></div>`)},
+reg(){photo='';set(`<div class="card"><h3>Student Registration</h3><div class="grid">${F([['surname','Surname'],['firstName','First name'],['middleName','Middle name'],['gender','Gender','Male,Female'],['dob','Date of birth','date'],['pob','Place of birth'],['nationality','Nationality'],['state','State of origin'],['lga','LGA'],['address','Residential address'],['phone','Phone'],['email','Student email (optional)','email'],['indigene','Status','Indigene,Non-Indigene'],['level','Section','Creche,Nursery,Primary,High School'],['class','Class'],['session','Session (2026/2027)'],['campus','Campus','Ediam,Ikot Oso'],['boarding','Boarding?','Day,Boarding'],['father','Father name'],['fatherPhone','Father phone'],['mother','Mother name'],['motherPhone','Mother phone'],['guardianEmail','Parent email (REQUIRED - used for password setup and recovery)','email'],['emName','Emergency contact'],['emPhone','Emergency phone'],['blood','Blood group'],['genotype','Genotype'],['allergies','Allergies'],['feeDue','Total fees due (₦)','number']])}</div>
+ <p>Passport photo:</p><input type="file" accept="image/*" capture="user" onchange="snap(this)"><img id="pv" class="pic"><br><button onclick="regStudent()">Register & Create Account</button><p id="rmsg"></p></div>`)},
+async bread(){
+ const d=(await list('bread_days')).sort((a,b)=>a.date>b.date?1:-1);let open=0;
+ const rows=d.map(r=>{const av=open+r.produced,close=av-r.sold-r.damaged;const o={...r,open,av,close};open=close;return o});
+ set(`<div class="card"><h3>Daily Bread Stock (carry-over is NOT a sale)</h3><table><tr><th>Date</th><th>Opening</th><th>Produced</th><th>Available</th><th>Sold</th><th>Damaged</th><th>Closing</th></tr>${rows.map(r=>`<tr><td>${esc(r.date)}</td><td>${r.open}</td><td>${r.produced}</td><td>${r.av}</td><td>${r.sold}</td><td>${r.damaged}</td><td><b>${r.close}</b></td></tr>`).join('')}</table></div>
+ <div class="card"><h3>Add day</h3><input id="bd" type="date" value="${today()}"><input id="bp" type="number" placeholder="Produced"><input id="bs" type="number" placeholder="Sold"><input id="bx" type="number" placeholder="Damaged"><button onclick="saveBread(${open})">Save (blocks negative stock)</button></div>`)},
+async notes(){
+ const n=(await list('notifications')).sort((a,b)=>b.at-a.at).slice(0,50);
+ set(n.map(x=>`<div class="card">${esc(x.msg)}<br><small>${new Date(x.at).toLocaleString()}</small></div>`).join('')||'<div class="card">Nothing yet.</div>')},
+staffreg(){photo='';set(`<div class="card"><h3>Add Staff / Role</h3>${F([['name','Full name'],['username','Username / Staff ID'],['email','Staff email (for password recovery)','email'],['password','Temporary password (min 6 characters)'],['role','Role','teacher,staff,principal,accountant,confectionery,admin'],['position','Position'],['department','Department'],['campus','Campus','Ediam,Ikot Oso'],['salary','Basic salary','number']])}
+ <p>Staff photo:</p><input type="file" accept="image/*" capture="user" onchange="snap(this)"><img id="pv" class="pic"><br><button onclick="addStaff()">Create Staff</button><p id="rmsg"></p></div>`)},
+async stat(){
+ const s=await list('stationery');
+ set(`<div class="card"><h3>Stationery</h3><table>${s.map(x=>`<tr><td>${esc(x.item)}</td><td>${money(x.price)}</td></tr>`).join('')}</table><input id="si" placeholder="Item"><input id="sp" type="number" placeholder="Price"><button onclick="addStat()">Add</button></div>`)},
+reset(){
+ if(!TOP.includes(me.role))return;
+ set(`<div class="card"><h3 class="red">Reset (Proprietor/Admin only)</h3><select id="rc"><option>announcements</option><option>results</option><option>attendance</option><option>fees</option><option>bread_days</option><option>notifications</option></select><button class="s" onclick="doReset()">Reset selected section</button></div>`)},
+async fees(){
+ const[st,fs]=await Promise.all([list('students'),list('fees')]);
+ st.sort((a,b)=>(a.surname||'').localeCompare(b.surname||''));fs.sort((a,b)=>b.at-a.at);
+ const paid={};fs.forEach(x=>paid[x.studentId]=(paid[x.studentId]||0)+(+x.amount||0));FEE={st,paid};
+ const day=x=>new Date(x.at).toISOString().slice(0,10),sum=f=>fs.filter(f).reduce((a,x)=>a+(+x.amount||0),0),
+  owing=st.map(s=>({...s,bal:(+s.feeDue||0)-(paid[s.id]||0)})).filter(s=>s.bal>0).sort((a,b)=>b.bal-a.bal),
+  opt=a=>a.map(x=>`<option>${x}</option>`).join('');
+ set(`<div class="grid"><div class="card stat"><span>Collected today</span><b class="green">${money(sum(x=>day(x)==today()))}</b></div><div class="card stat"><span>This month</span><b>${money(sum(x=>day(x).slice(0,7)==today().slice(0,7)))}</b></div><div class="card stat"><span>All recorded</span><b>${money(sum(()=>true))}</b></div><div class="card stat"><span>Students owing</span><b class="red">${owing.length}</b></div></div>
+ <div class="card"><h3>Record Payment</h3><select id="fee_s" onchange="feeInfo()"><option value="">Select student</option>${st.map(s=>`<option value="${s.id}">${esc(s.surname)} ${esc(s.firstName)} (${esc(s.regNo)}) - ${esc(s.class)}</option>`).join('')}</select><p id="fee_info"></p>
+ <select id="fee_t">${opt(['Tuition','Uniform','Books','Boarding','Transport','Exam','Other'])}</select><select id="fee_tri">${opt(['1st Trimester','2nd Trimester','3rd Trimester','Full session'])}</select>
+ <input id="fee_a" type="number" min="0" placeholder="Amount (₦)"><select id="fee_m">${opt(['Cash','Bank transfer','POS'])}</select><input id="fee_r" placeholder="Reference / teller no (optional)"><button onclick="saveFee()">Save payment</button></div>
+ <div class="card"><h3>Students owing</h3><table><tr><th>ID</th><th>Name</th><th>Class</th><th>Due</th><th>Balance</th></tr>${owing.map(s=>`<tr><td>${esc(s.regNo)}</td><td>${esc(s.surname)} ${esc(s.firstName)}</td><td>${esc(s.class)}</td><td>${money(s.feeDue)}</td><td class="red">${money(s.bal)}</td></tr>`).join('')||'<tr><td>No outstanding balances.</td></tr>'}</table></div>
+ <div class="card"><h3>Recent payments</h3><table><tr><th>Receipt</th><th>Date</th><th>Student</th><th>Type</th><th>Trimester</th><th>Amount</th><th>Method</th><th>By</th><th></th></tr>${fs.slice(0,50).map(x=>`<tr><td>${esc(x.receiptNo||'-')}</td><td>${new Date(x.at).toLocaleDateString()}</td><td>${esc(x.studentName)}</td><td>${esc(x.type)}</td><td>${esc(x.trimester||'')}</td><td>${money(x.amount)}</td><td>${esc(x.method||'')}</td><td>${esc(x.byName)}</td><td><button class="g" onclick="receipt('${x.id}')">Receipt</button>${TOP.includes(me.role)?` <button class="s" onclick="voidFee('${x.id}')">Void</button>`:''}</td></tr>`).join('')}</table></div>`)},
+acct(){
+ const fake=(me.email||auth.currentUser.email||'').endsWith(FAKE);
+ set(`<div class="card"><h3>My Account</h3><p>Login: <b>${esc(me.username||auth.currentUser.email)}</b><br>Recovery email: <b>${fake?'<span class="red">none saved - ask the school office to add one</span>':esc(auth.currentUser.email)}</b></p>
+ <h4>Change password</h4><input id="cp_old" type="password" placeholder="Current password"><input id="cp_new" type="password" placeholder="New password (min 6 characters)"><button onclick="changePw()">Change password</button>
+ <h4>Forgot current password?</h4><button class="g" onclick="sendMyReset()">Email me a reset link</button><p id="amsg"></p></div>
+ <div class="card"><h3>Fingerprint</h3><p>${bioGet(me.uid)?'<span class="green">Enabled on this device.</span> Tap Lock when you leave, then sign back in with your fingerprint. (Logout clears it; sign in with your password after that.)':'Not enabled on this device.'}</p>${bioGet(me.uid)?'<button class="g" onclick="disableBio()">Disable on this device</button>':'<button onclick="enableBio()">Enable fingerprint on this device</button>'}<p id="bmsg"></p></div>`)}
 };
 
-firebase.initializeApp(CFG);
-
-const auth = firebase.auth();
-const db = firebase.firestore();
-const $ = s => document.querySelector(s);
-
-const money=n=>'₦'+Number(n||0).toLocaleString(),today=()=>new Date().toISOString().slice(0,10);
-const TOP=['proprietor','admin'],MG=['proprietor','admin','principal'];let me,photo='';
-const MENU={student:['dash:Dashboard','news:Announcements'],teacher:['dash:My Dashboard','scores:Enter Scores','attend:Attendance','news:Announcements'],
-staff:['dash:My Dashboard','attend:Attendance','news:Announcements'],
-principal:['mgmt:Overview','reg:Registration','news:Post Announcement','pub:Validate Results','attend:Attendance','bread:Confectionery','notes:Notifications'],
-proprietor:null,admin:null};
-MENU.proprietor=MENU.admin=[...MENU.principal,'staffreg:Staff & Roles','stat:Stationery','reset:Reset'];
-auth.onAuthStateChanged(async user=>{
-  if(!user){
-    login_.style.display='grid';
-    app.style.display='none';
-    return;
-  }
-  try {
-    const doc = await db.doc('users/' + user.uid).get();
-    if(!doc.exists){
-      err.textContent = 'Signed in, but no role profile was found for this account. In Firestore, create users/' +
-        user.uid + ' with role and name fields.';
-      await auth.signOut();
-      return;
-    }
-    me = {uid:user.uid, ...doc.data()};
-    if(!me.role){
-      err.textContent = 'Your Firestore users profile is missing the role field.';
-      await auth.signOut();
-      return;
-    }
-    login_.style.display='none';
-    app.style.display='grid';
-    document.body.className = me.role === 'student' ? 'student' : '';
-    side.innerHTML = `<img src="${LOGO_URL}" alt="Divine Seeds logo" onerror="this.style.display='none'"><h4>DIVINE SEEDS</h4>` +
-      (MENU[me.role] || MENU.staff).map(item=>{
-        const [key,label] = item.split(':');
-        return `<a data-k="${key}" onclick="go('${key}')">${label}</a>`;
-      }).join('');
-    go((MENU[me.role] || MENU.staff)[0].split(':')[0]);
-  } catch (e) {
-    console.error('Could not load user profile:', e.code, e.message);
-    err.textContent = 'Signed in, but could not read your Firestore profile. Check Firestore rules and the users document.';
-    await auth.signOut();
-  }
-});
-const login_=$('#login'),app=$('#app'),side=$('#side'),err=$('#err');
-async function login(){
-  const entered = u.value.trim().toLowerCase();
-  const password = p.value;
-  err.textContent = '';
-
-  if (!entered || !password) {
-    err.textContent = 'Enter your username and password.';
-    return;
-  }
-
-  // The portal uses usernames mapped to @divineseeds.app emails.
-  // Also accept a full email address if one is entered.
-  const email = entered.includes('@') ? entered : entered + '@divineseeds.app';
-
-  try {
-    await auth.signInWithEmailAndPassword(email, password);
-  } catch (e) {
-    console.error('Firebase sign-in failed:', e.code, e.message);
-    const messages = {
-      'auth/invalid-email': 'The username/email format is invalid.',
-      'auth/user-not-found': 'No Firebase account matches this username. Check Authentication → Users.',
-      'auth/wrong-password': 'The password is incorrect. Reset the password for this Firebase account and try again.',
-      'auth/invalid-credential': 'The username or password is incorrect, or this account is not in the configured Firebase project.',
-      'auth/too-many-requests': 'Too many attempts. Wait a while, then try again or reset the password.',
-      'auth/operation-not-allowed': 'Email/password sign-in is disabled. Enable it in Firebase Authentication → Sign-in method.',
-      'auth/network-request-failed': 'Network error. Check your internet connection and try again.',
-      'auth/unauthorized-domain': 'This site domain is not authorized. Add the deployed domain in Firebase Authentication → Settings → Authorized domains.'
-    };
-    err.textContent = (messages[e.code] || ('Login failed: ' + (e.code || 'unknown error'))) +
-      ' If this continues, check the browser console for the Firebase error code.';
-  }
-}
-async function bio(){try{if(!window.PublicKeyCredential)throw 0;err.textContent='Fingerprint sign-in needs WebAuthn enrolment - see guide (Phase 2). Use password for now.'}catch(e){err.textContent='Biometrics not supported on this device.'}}
-const add=(c,o)=>db.collection(c).add({...o,by:me.uid,byName:me.name,at:Date.now()});
-const list=async(c,f)=>{let q=db.collection(c);if(f)q=q.where(...f);return(await q.get()).docs.map(d=>({id:d.id,...d.data()}))};
-const notify=m=>add('notifications',{msg:m,to:MG});
-function go(k){document.querySelectorAll('aside a').forEach(a=>a.classList.toggle('on',a.dataset.k==k));side.classList.remove('open');
- ttl.textContent=document.querySelector(`aside a[data-k=${k}]`)?.textContent||'';V[k]()}
-const set=h=>$('#main').innerHTML=h;
-const V={
-async dash(){ if(me.role=='student')return studentDash(me.uid); const s=(await db.doc('staff/'+me.uid).get()).data()||{};
- const at=await list('attendance',['uid','==',me.uid]);const ab=at.filter(a=>a.status=='Absent').length;
- set(`<div class="card hero"><img class="pic" src="${s.photo||''}"><div><h2>${me.name}</h2><p>${s.position||me.role} · ${s.department||''}<br>ID: ${s.staffId||''} · ${s.campus||''}</p></div></div>
- <div class="grid"><div class="card stat"><span>Basic Salary</span><b>${money(s.salary)}</b></div><div class="card stat"><span>Fines (₦1,000/absence)</span><b class="red">${money(ab*1000)}</b></div><div class="card stat"><span>Net Pay</span><b class="green">${money((s.salary||0)-ab*1000)}</b></div><div class="card stat"><span>Days Present</span><b>${at.length-ab}</b></div></div>
- <div class="card"><h3>Attendance Record</h3><table><tr><th>Date</th><th>Time</th><th>Status</th></tr>${at.map(a=>`<tr><td>${a.date}</td><td>${a.time||'-'}</td><td class="${a.status=='Present'?'green':'red'}">${a.status}</td></tr>`).join('')}</table></div>`)},
-async news(){const aud=me.role=='student'?'students':'staff';const a=(await list('announcements',MG.includes(me.role)?null:['audience','==',aud])).sort((x,y)=>y.at-x.at);
- set(a.map(x=>`<div class="card"><b>${x.title}</b> <span class="tag" style="background:var(--acc)">${x.audience}</span><p>${x.body}</p><small>${x.byName} · ${new Date(x.at).toLocaleString()}</small></div>`).join('')||'<div class="card">No announcements yet.</div>')},
-async attend(){const t=today(),id=t+'_'+me.uid;const ex=await db.doc('attendance/'+id).get();
- set(`<div class="card"><h3>Working-hours Attendance (Staff)</h3><p>Clock in before <b>08:00</b> to be Present. Later or no clock-in = Absent and a ₦1,000 fine.</p>
- ${ex.exists?`<p class="green">Recorded: ${ex.data().status} at ${ex.data().time}</p>`:`<button onclick="clock()">👆 Fingerprint Clock-In</button>`}</div>`)},
-async scores(){const st=await list('students');set(`<div class="card"><h3>Enter Scores</h3><select id="sid">${st.map(s=>`<option value="${s.id}">${s.surname} ${s.firstName} (${s.class})</option>`).join('')}</select>
- <input id="sub" placeholder="Subject"><select id="tri"><option>1st Trimester</option><option>2nd Trimester</option><option>3rd Trimester</option></select>
- <input id="test" type="number" placeholder="Test score (40)"><input id="exam" type="number" placeholder="Exam score (60)"><button onclick="saveScore()">Submit</button></div>`)},
-async pub(){const r=(await list('results')).filter(x=>!x.published);set(`<div class="card"><h3>Results awaiting validation</h3><table><tr><th>Student</th><th>Subject</th><th>Trimester</th><th>Total</th><th></th></tr>${r.map(x=>`<tr><td>${x.studentName}</td><td>${x.subject}</td><td>${x.trimester}</td><td>${x.test+x.exam}</td><td><button onclick="publish('${x.id}')">Validate</button></td></tr>`).join('')}</table></div>`)},
-async mgmt(){const[s,t,n]=await Promise.all([list('students'),list('staff'),list('attendance',['date','==',today()])]);
- set(`<div class="grid"><div class="card stat"><span>Students</span><b>${s.length}</b></div><div class="card stat"><span>Staff</span><b>${t.length}</b></div><div class="card stat"><span>Staff present today</span><b class="green">${n.filter(x=>x.status=='Present').length}</b></div></div>
- <div class="card"><h3>Students</h3><table><tr><th>ID</th><th>Name</th><th>Class</th><th>Campus</th><th></th></tr>${s.map(x=>`<tr><td>${x.regNo}</td><td>${x.surname} ${x.firstName}</td><td>${x.class}</td><td>${x.campus}</td><td><button class="g" onclick="studentDash('${x.id}')">Open</button></td></tr>`).join('')}</table></div>`)},
-reg(){set(`<div class="card"><h3>Student Registration</h3><div class="grid">${F([['surname','Surname'],['firstName','First name'],['middleName','Middle name'],['gender','Gender','Male,Female'],['dob','Date of birth','date'],['pob','Place of birth'],['nationality','Nationality'],['state','State of origin'],['lga','LGA'],['address','Residential address'],['phone','Phone'],['email','Email'],['indigene','Status','Indigene,Non-Indigene'],['level','Section','Creche,Nursery,Primary,High School'],['class','Class'],['session','Session (2026/2027)'],['campus','Campus','Ediam,Ikot Oso'],['boarding','Boarding?','Day,Boarding'],['father','Father name'],['fatherPhone','Father phone'],['mother','Mother name'],['motherPhone','Mother phone'],['guardianEmail','Parent email'],['emName','Emergency contact'],['emPhone','Emergency phone'],['blood','Blood group'],['genotype','Genotype'],['allergies','Allergies'],['feeDue','Total fees due (₦)','number']])}</div>
- <p>Passport photo:</p><input type="file" accept="image/*" capture="user" onchange="snap(this)"><img id="pv" class="pic"><br><button onclick="regStudent()">Register & Create Account</button><p id="rmsg"></p></div>`)},
-async news_post(){},
-async bread(){const d=(await list('bread_days')).sort((a,b)=>a.date>b.date?1:-1);let open=0;
- const rows=d.map(r=>{const av=open+r.produced,close=av-r.sold-r.damaged;const o={...r,open,av,close};open=close;return o});
- set(`<div class="card"><h3>Daily Bread Stock (carry-over is NOT a sale)</h3><table><tr><th>Date</th><th>Opening</th><th>Produced</th><th>Available</th><th>Sold</th><th>Damaged</th><th>Closing</th></tr>${rows.map(r=>`<tr><td>${r.date}</td><td>${r.open}</td><td>${r.produced}</td><td>${r.av}</td><td>${r.sold}</td><td>${r.damaged}</td><td><b>${r.close}</b></td></tr>`).join('')}</table></div>
- <div class="card"><h3>Add day</h3><input id="bd" type="date" value="${today()}"><input id="bp" type="number" placeholder="Produced"><input id="bs" type="number" placeholder="Sold"><input id="bx" type="number" placeholder="Damaged"><button onclick="saveBread(${open})">Save (blocks negative stock)</button></div>`)},
-async notes(){const n=(await list('notifications')).sort((a,b)=>b.at-a.at).slice(0,50);set(n.map(x=>`<div class="card">${x.msg}<br><small>${new Date(x.at).toLocaleString()}</small></div>`).join('')||'<div class="card">Nothing yet.</div>')},
-async staffreg(){set(`<div class="card"><h3>Add Staff / Role</h3>${F([['name','Full name'],['username','Username / Staff ID'],['password','Password'],['role','Role','teacher,staff,principal,accountant,confectionery,admin'],['position','Position'],['department','Department'],['campus','Campus','Ediam,Ikot Oso'],['salary','Basic salary','number']])}<button onclick="addStaff()">Create Staff</button><p id="rmsg"></p></div>`)},
-async stat(){const s=await list('stationery');set(`<div class="card"><h3>Stationery</h3><table>${s.map(x=>`<tr><td>${x.item}</td><td>${money(x.price)}</td></tr>`).join('')}</table><input id="si" placeholder="Item"><input id="sp" type="number" placeholder="Price"><button onclick="add('stationery',{item:si.value,price:+sp.value}).then(()=>go('stat'))">Add</button></div>`)},
-reset(){if(!TOP.includes(me.role))return;set(`<div class="card"><h3 class="red">Reset (Proprietor/Admin only)</h3><select id="rc"><option>announcements</option><option>results</option><option>attendance</option><option>fees</option><option>bread_days</option><option>notifications</option></select><button class="s" onclick="doReset()">Reset selected section</button></div>`)}};
-V.news_post=null;
-const _news=V.news;V.news=async function(){if(!MG.includes(me.role))return _news();await _news();$('#main').insertAdjacentHTML('afterbegin',`<div class="card"><h3>Post Announcement</h3><select id="aud"><option value="students">Students</option><option value="staff">Teachers & Staff</option></select><input id="at" placeholder="Title"><textarea id="ab" placeholder="Message"></textarea><button onclick="postNews()">Publish</button></div>`)};
-V.news_=0;
-function F(a){return a.map(([k,l,o])=>o&&o!='date'&&o!='number'?`<select id="f_${k}"><option value="">${l}</option>${o.split(',').map(x=>`<option>${x}</option>`).join('')}</select>`:`<input id="f_${k}" type="${o||'text'}" placeholder="${l}">`).join('')}
-const G=()=>Object.fromEntries([...document.querySelectorAll('[id^=f_]')].map(e=>[e.id.slice(2),e.value]));
-function snap(i){const f=i.files[0],im=new Image();im.onload=()=>{const c=document.createElement('canvas');c.width=c.height=240;const x=c.getContext('2d');x.filter='brightness(1.08) contrast(1.05) saturate(1.1)';const m=Math.min(im.width,im.height);x.drawImage(im,(im.width-m)/2,(im.height-m)/2,m,m,0,0,240,240);photo=c.toDataURL('image/jpeg',.8);$('#pv').src=photo};im.src=URL.createObjectURL(f)}
-async function mkUser(username,pw,data){const sec=firebase.apps.find(a=>a.name=='sec')||firebase.initializeApp(CFG,'sec');
- const c=await sec.auth().createUserWithEmailAndPassword(username+'@divineseeds.app',pw);await sec.auth().signOut();await db.doc('users/'+c.user.uid).set(data);return c.user.uid}
-async function regStudent(){const g=G();const n=(await list('students')).length+1,reg='DSIS/'+new Date().getFullYear()+'/'+String(n).padStart(4,'0');
- const uid=await mkUser(reg.replace(/\//g,'').toLowerCase(),'Seeds'+Math.floor(1000+Math.random()*9000),{role:'student',name:g.firstName+' '+g.surname});
- await db.doc('students/'+uid).set({...g,feeDue:+g.feeDue||0,regNo:reg,photo,status:'Active',registered:Date.now()});await notify('New student registered: '+g.firstName+' '+g.surname);
- rmsg.innerHTML=`Done. Username: <b>${reg.replace(/\//g,'').toLowerCase()}</b> (give the parent the temporary password from Firebase console or reset by email).`}
+// ---------- Actions ----------
+async function changePw(){
+ const m=$('#amsg'),nw=v('cp_new');m.className='red';
+ if(nw.length<6){m.textContent='New password must be at least 6 characters.';return}
+ try{const u=auth.currentUser;await u.reauthenticateWithCredential(firebase.auth.EmailAuthProvider.credential(u.email,v('cp_old')));await u.updatePassword(nw);m.className='green';m.textContent='Password changed.'}
+ catch(e){m.textContent=e.code=='auth/invalid-credential'||e.code=='auth/wrong-password'?'Current password is incorrect.':'Could not change password: '+e.code}}
+async function sendMyReset(){
+ const m=$('#amsg'),e=auth.currentUser.email;
+ if(e.endsWith(FAKE)){m.className='red';m.textContent='No recovery email is saved. Contact the school office.';return}
+ try{await auth.sendPasswordResetEmail(e);m.className='green';m.textContent='Reset link sent to '+e+'.'}catch(x){m.className='red';m.textContent='Could not send: '+x.code}}
+async function mkUser(username,pw,data,realEmail){
+ username=username.toLowerCase();
+ const email=(realEmail||'').trim().toLowerCase()||(username+FAKE);
+ const sec=firebase.apps.find(a=>a.name=='sec')||firebase.initializeApp(CFG,'sec');
+ const c=await sec.auth().createUserWithEmailAndPassword(email,pw);
+ if(realEmail){try{await sec.auth().sendPasswordResetEmail(email)}catch(e){console.warn(e.code)}}
+ await sec.auth().signOut();
+ await db.doc('users/'+c.user.uid).set({...data,email,username});
+ await db.doc('usernames/'+username).set({email});
+ return c.user.uid}
+async function regStudent(){
+ const g=G(),m=$('#rmsg');
+ if(!g.surname||!g.firstName){m.textContent='Enter surname and first name.';return}
+ if(!g.guardianEmail){m.textContent='Parent email is required so the parent can set and recover the password.';return}
+ const n=(await list('students')).length+1,reg='DSIS/'+new Date().getFullYear()+'/'+String(n).padStart(4,'0'),un=reg.replace(/\//g,'').toLowerCase();
+ try{
+  const uid=await mkUser(un,'Seeds'+Math.floor(100000+Math.random()*900000),{role:'student',name:g.firstName+' '+g.surname},g.guardianEmail);
+  await db.doc('students/'+uid).set({...g,feeDue:+g.feeDue||0,regNo:reg,username:un,photo,status:'Active',registered:Date.now()});
+  await notify('New student registered: '+g.firstName+' '+g.surname);
+  m.innerHTML=`Done. Username: <b>${un}</b>. A link to set the password was emailed to ${esc(g.guardianEmail)}.`;
+ }catch(e){console.error(e);m.textContent='Could not register: '+(e.code||e.message)}}
 async function addStaff(){
-  const g = G();
-  if(!g.name || !g.username || !g.password || !g.role){
-    rmsg.textContent = 'Enter name, username, password, and role.';
-    return;
-  }
-  try {
-    const uid = await mkUser(g.username.toLowerCase(), g.password, {role:g.role, name:g.name});
-    delete g.password;
-    await db.doc('staff/' + uid).set({...g, staffId:g.username, salary:+g.salary||0, photo});
-    rmsg.textContent = 'Staff account created successfully.';
-  } catch(e) {
-    console.error('Create staff failed:', e.code, e.message);
-    rmsg.textContent = 'Could not create staff: ' + (e.code || e.message || 'unknown error');
-  }
-}
-async function clock(){const n=new Date(),hm=n.toTimeString().slice(0,5),st=hm<='08:00'?'Present':'Absent';
- await db.doc('attendance/'+today()+'_'+me.uid).set({uid:me.uid,name:me.name,date:today(),time:hm,status:st,fine:st=='Absent'?1000:0});
- await notify(`${me.name} marked ${st} at ${hm}`);go('attend')}
-async function postNews(){await add('announcements',{audience:aud.value,title:at.value,body:ab.value});await notify('New announcement for '+aud.value+': '+at.value);go('news')}
-async function saveScore(){const o=sid.options[sid.selectedIndex].text;await add('results',{studentId:sid.value,studentName:o,subject:sub.value,trimester:tri.value,test:+test.value,exam:+exam.value,published:false});alert('Submitted for validation')}
+ const g=G(),m=$('#rmsg');
+ if(!g.name||!g.username||!g.password||!g.role){m.textContent='Enter name, username, password, and role.';return}
+ if(g.password.length<6){m.textContent='Password must be at least 6 characters.';return}
+ try{
+  const uid=await mkUser(g.username,g.password,{role:g.role,name:g.name},g.email);
+  delete g.password;
+  await db.doc('staff/'+uid).set({...g,staffId:g.username,salary:+g.salary||0,photo});
+  m.textContent='Staff account created successfully.';
+ }catch(e){console.error(e);m.textContent='Could not create staff: '+(e.code||e.message)}}
+async function clock(){
+ if(bioGet(me.uid)){try{await verifyBio(me.uid)}catch(e){return alert('Fingerprint check failed or was cancelled. Attendance not recorded.')}}
+ const n=new Date(),hm=n.toTimeString().slice(0,5),st=hm<='08:00'?'Present':'Absent';
+ try{
+  await db.doc('attendance/'+today()+'_'+me.uid).set({uid:me.uid,name:me.name,date:today(),time:hm,status:st,fine:st=='Absent'?1000:0});
+  await notify(`${me.name} marked ${st} at ${hm}`);
+ }catch(e){alert('Could not record attendance: '+(e.code||e.message))}
+ go('attend')}
+async function postNews(){
+ if(!v('ann_t')||!v('ann_b'))return alert('Enter a title and message.');
+ await add('announcements',{audience:v('aud'),title:v('ann_t'),body:v('ann_b')});
+ await notify('New announcement for '+v('aud')+': '+v('ann_t'));go('news')}
+async function saveScore(){
+ const sel=$('#sid'),t=+v('tst'),x=+v('exm');
+ if(!sel.value||!v('sub').trim())return alert('Choose a student and enter the subject.');
+ if(!(t>=0&&t<=40)||!(x>=0&&x<=60))return alert('Test must be 0-40 and exam 0-60.');
+ await add('results',{studentId:sel.value,studentName:sel.options[sel.selectedIndex].text,subject:v('sub').trim(),trimester:v('tri'),test:t,exam:x,published:false});
+ alert('Submitted for validation')}
 async function publish(id){await db.doc('results/'+id).update({published:true});await notify('Results validated');go('pub')}
-async function saveBread(open){const p=+bp.value||0,s=+bs.value||0,x=+bx.value||0;if(open+p-s-x<0)return alert('Negative stock not allowed');await db.collection('bread_days').doc(bd.value).set({date:bd.value,produced:p,sold:s,damaged:x});go('bread')}
-async function doReset(){if(!confirm('Delete ALL records in '+rc.value+'?'))return;const q=await db.collection(rc.value).get();const b=db.batch();q.docs.forEach(d=>b.delete(d.ref));await b.commit();alert('Reset done')}
-async function studentDash(id){const[s,r,f,c]=await Promise.all([db.doc('students/'+id).get().then(d=>d.data()||{}),list('results',['studentId','==',id]),list('fees',['studentId','==',id]),list('comments',['studentId','==',id])]);
- const res=r.filter(x=>x.published),tot=res.map(x=>x.test+x.exam),paid=f.reduce((a,x)=>a+x.amount,0),due=s.feeDue||0,fit=paid>=due;
- set(`<div class="grid" style="grid-template-columns:minmax(260px,320px) 1fr;align-items:start"><div class="card" style="text-align:center"><img class="pic" style="width:170px;height:170px" src="${s.photo||''}"><h2>${(s.surname||'')+' '+(s.firstName||'')}</h2><p style="color:var(--mut)">ID: ${s.regNo||''} · ${s.class||''} · ${s.campus||''}</p>
+async function saveBread(open){
+ const p=+v('bp')||0,s=+v('bs')||0,x=+v('bx')||0;
+ if(open+p-s-x<0)return alert('Negative stock not allowed');
+ await db.collection('bread_days').doc(v('bd')).set({date:v('bd'),produced:p,sold:s,damaged:x});go('bread')}
+async function addStat(){await add('stationery',{item:v('si'),price:+v('sp')||0});go('stat')}
+async function doReset(){
+ const c=v('rc');if(!confirm('Delete ALL records in '+c+'?'))return;
+ const docs=(await db.collection(c).get()).docs;
+ for(let i=0;i<docs.length;i+=400){const b=db.batch();docs.slice(i,i+400).forEach(d=>b.delete(d.ref));await b.commit()}
+ alert('Reset done')}
+function feeInfo(){const s=FEE.st.find(x=>x.id===v('fee_s')),i=$('#fee_info');if(!s){i.innerHTML='';return}const pd=FEE.paid[s.id]||0,b=(+s.feeDue||0)-pd;i.innerHTML=`Fee due <b>${money(s.feeDue)}</b> · Paid <b>${money(pd)}</b> · Balance <b class="${b>0?'red':'green'}">${money(Math.max(b,0))}</b>`}
+async function saveFee(){
+ const sid=v('fee_s'),a=+v('fee_a');
+ if(!sid)return alert('Select a student.');
+ if(!(a>0))return alert('Enter a valid amount.');
+ const s=FEE.st.find(x=>x.id===sid),bal=(+s.feeDue||0)-(FEE.paid[sid]||0);
+ if(a>bal&&!confirm('This is more than the balance ('+money(Math.max(bal,0))+'). Record anyway?'))return;
+ const no='RCP-'+today().replace(/-/g,'')+'-'+Math.floor(1000+Math.random()*9000);
+ try{
+  await add('fees',{studentId:sid,studentName:s.surname+' '+s.firstName,regNo:s.regNo||'',type:v('fee_t'),trimester:v('fee_tri'),amount:a,method:v('fee_m'),ref:v('fee_r').trim(),receiptNo:no});
+  await notify('Fee recorded: '+money(a)+' from '+s.surname+' '+s.firstName+' ('+v('fee_t')+')');
+  go('fees');
+ }catch(e){alert('Could not save payment: '+(e.code||e.message))}}
+async function voidFee(id){if(!confirm('Void (delete) this payment record?'))return;await db.doc('fees/'+id).delete();await notify('A payment record was voided by '+me.name);go('fees')}
+async function postComment(id){if(!v('cm').trim())return;await add('comments',{studentId:id,text:v('cm').trim()});studentDash(id)}
+async function studentDash(id){
+ const[s,r,f,c]=await Promise.all([db.doc('students/'+id).get().then(d=>d.data()||{}),list('results',['studentId','==',id],['published','==',true]),list('fees',['studentId','==',id]),list('comments',['studentId','==',id])]);
+ const tot=r.map(x=>x.test+x.exam),paid=f.reduce((a,x)=>a+(+x.amount||0),0),due=+s.feeDue||0,fit=paid>=due;
+ set(`<div class="grid" style="grid-template-columns:minmax(260px,320px) 1fr;align-items:start"><div class="card" style="text-align:center"><img class="pic" style="width:170px;height:170px" src="${esc(s.photo||'')}"><h2>${esc((s.surname||'')+' '+(s.firstName||''))}</h2><p style="color:var(--mut)">ID: ${esc(s.regNo||'')} · ${esc(s.class||'')} · ${esc(s.campus||'')}</p>
  <div class="grid"><div class="stat"><b>${money(paid)}</b><span>Paid</span></div><div class="stat"><b>${money(Math.max(due-paid,0))}</b><span>Balance</span></div><div class="stat"><b class="${fit?'green':'red'}">${fit?'Fit':'Owing'}</b><span>Class status</span></div></div></div>
- <div><div class="card"><h3>Academic Results ${tot.length?`<small>(High ${Math.max(...tot)} · Low ${Math.min(...tot)})</small>`:''}</h3><table><tr><th>Subject</th><th>Trimester</th><th>Test</th><th>Exam</th><th>Total</th></tr>${res.map(x=>{const t=x.test+x.exam;return`<tr><td>${x.subject}</td><td>${x.trimester}</td><td>${x.test}</td><td>${x.exam}</td><td class="${t<50?'red':'green'}">${t}</td></tr>`}).join('')||'<tr><td>Results not yet released.</td></tr>'}</table></div>
- <div class="card"><h3>Payments</h3><table>${f.map(x=>`<tr><td>${x.type}</td><td>${x.trimester||''}</td><td>${money(x.amount)}</td><td><button class="g" onclick="receipt('${x.id}')">Receipt</button></td></tr>`).join('')}</table></div>
- <div class="card"><h3>Comments</h3>${c.map(x=>`<p><b>${x.byName}</b>: ${x.text}</p>`).join('')}<input id="cm" placeholder="Write a comment"><button onclick="add('comments',{studentId:'${id}',text:cm.value}).then(()=>studentDash('${id}'))">Post</button></div></div></div>`)}
-async function receipt(id){const f=(await db.doc('fees/'+id).get()).data(),s=(await db.doc('students/'+f.studentId).get()).data();
- const w=open('');w.document.write(`<body style="font-family:Arial;padding:30px"><img src="${LOGO_URL}" width=80><img src="${s.photo}" width=90 style="float:right"><h2>Payment Receipt</h2><p>${s.surname} ${s.firstName} (${s.regNo})</p><p>${f.type} — <b>${money(f.amount)}</b></p><p>${new Date(f.at).toLocaleString()}</p><script>print()<\/script>`)}
+ <div><div class="card"><h3>Academic Results ${tot.length?`<small>(High ${Math.max(...tot)} · Low ${Math.min(...tot)})</small>`:''}</h3><table><tr><th>Subject</th><th>Trimester</th><th>Test</th><th>Exam</th><th>Total</th></tr>${r.map(x=>{const t=x.test+x.exam;return`<tr><td>${esc(x.subject)}</td><td>${esc(x.trimester)}</td><td>${x.test}</td><td>${x.exam}</td><td class="${t<50?'red':'green'}">${t}</td></tr>`}).join('')||'<tr><td>Results not yet released.</td></tr>'}</table></div>
+ <div class="card"><h3>Payments</h3><table>${f.map(x=>`<tr><td>${new Date(x.at).toLocaleDateString()}</td><td>${esc(x.type)}</td><td>${esc(x.trimester||'')}</td><td>${money(x.amount)}</td><td><button class="g" onclick="receipt('${x.id}')">Receipt</button></td></tr>`).join('')}</table></div>
+ <div class="card"><h3>Comments</h3>${c.map(x=>`<p><b>${esc(x.byName)}</b>: ${esc(x.text)}</p>`).join('')}<input id="cm" placeholder="Write a comment"><button onclick="postComment('${id}')">Post</button></div></div></div>`)}
+async function receipt(id){
+ const f=(await db.doc('fees/'+id).get()).data(),s=(await db.doc('students/'+f.studentId).get()).data()||{};
+ const w=window.open('');if(!w)return alert('Allow pop-ups to print the receipt.');
+ w.document.write(`<body style="font-family:Arial;padding:30px;max-width:600px"><img src="${esc(new URL(LOGO_URL,location.href).href)}" width=80>${s.photo?`<img src="${esc(s.photo)}" width=90 style="float:right">`:''}<h2>Payment Receipt</h2><p><b>No:</b> ${esc(f.receiptNo||'-')}<br><b>Date:</b> ${new Date(f.at).toLocaleString()}</p><p>${esc(s.surname)} ${esc(s.firstName)} (${esc(s.regNo)})</p><p>${esc(f.type)}${f.trimester?' - '+esc(f.trimester):''}<br><b>Amount: ${money(f.amount)}</b><br>Method: ${esc(f.method||'-')}${f.ref?' · Ref: '+esc(f.ref):''}</p><p>Received by: ${esc(f.byName||'')}</p><script>print()<\/script>`)}
 </script></body></html>
