@@ -30,6 +30,31 @@ table{width:100%;border-collapse:collapse;font-size:14px;display:block;overflow-
 .row{display:flex;gap:8px;flex-wrap:wrap}.row>*{flex:1;min-width:130px}.row>button{flex:0 0 auto}
 .tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}.tabs button{margin:0}
 #menu{display:none}
+/* ---- Student dashboard ---- */
+.sd{display:grid;grid-template-columns:270px minmax(0,1fr) 310px;gap:16px;align-items:start}
+.sd>.card{margin:0}.mut{color:var(--mut);margin:2px 0;font-size:13px}
+.sdp{text-align:center;padding:26px 18px}
+.sdp .ph{width:170px;height:170px;border-radius:50%;object-fit:cover;border:4px solid var(--gold);box-shadow:0 0 0 7px rgba(245,183,0,.16),0 12px 30px rgba(0,0,0,.28);background:var(--bd)}
+.sdp h2{margin:18px 0 4px;font-size:22px;letter-spacing:.3px}
+.trio{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:18px}
+.trio div{border:1px solid var(--bd);border-radius:12px;padding:10px 4px}
+.trio span{display:block;font-size:11px;color:var(--mut)}.trio b{font-size:18px}
+.fb{margin-top:14px;text-align:left}.fb small{color:var(--mut)}
+.bar{height:6px;border-radius:6px;background:var(--bd);margin-top:5px;overflow:hidden}.bar i{display:block;height:100%;background:var(--gold);border-radius:6px}
+.sdtabs{display:flex;gap:24px;border-bottom:1px solid var(--bd);margin-bottom:6px;overflow-x:auto}
+.sdtabs a{padding:8px 0 11px;cursor:pointer;color:var(--mut);font-weight:600;border-bottom:2px solid transparent;white-space:nowrap}
+.sdtabs a.on{color:var(--pri);border-color:var(--pri)}
+.sdm{padding:18px 22px}
+.sdm .card{background:transparent;border:0;border-top:1px solid var(--bd);border-radius:0;padding:16px 0;margin:0}
+.sdm .card:first-child{border-top:0}
+.sdm h3,.sdm h4,.rc h4{margin:0 0 10px;font-size:14px;color:var(--pri);letter-spacing:.3px}
+.sum{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}.sum p{line-height:1.9;margin:0}
+.rc .card{margin-bottom:16px}.rc h5{margin:12px 0 8px;font-size:12px;color:var(--mut);font-weight:600}.rc h5:first-of-type{margin-top:0}
+.ev{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;background:var(--bg);border-left:3px solid var(--k);margin-bottom:7px;font-size:14px}
+.ev small{display:block;color:var(--mut)}.ev .dt{font-size:12px;color:var(--mut);white-space:nowrap}
+.sj{display:flex;justify-content:space-between;padding:9px 12px;border-radius:10px;background:var(--bg);border-left:3px solid var(--gold);margin-bottom:7px;font-size:14px}
+@media(max-width:1100px){.sd{grid-template-columns:260px minmax(0,1fr)}.sd .rc{grid-column:1/-1}}
+@media(max-width:800px){.sd{grid-template-columns:1fr}.sdm{padding:14px}}
 @media(max-width:800px){#appBox{grid-template-columns:1fr}aside{position:fixed;left:-260px;width:240px;z-index:9;transition:.2s}aside.open{left:0}#menu{display:inline-block}}
 </style></head><body>
 <div id="loginBox"><div class="lbox"><img src="" id="lg" alt="Divine Seeds International Schools logo" onerror="this.style.display='none'"><h2>DIVINE SEEDS INTERNATIONAL EKET</h2><small>Training Godly Future Champions</small><br><br>
@@ -449,7 +474,7 @@ async function saveFee(){
   go('fees');
  }catch(e){alert('Could not save payment: '+(e.code||e.message))}}
 async function voidFee(id){if(!confirm('Void (delete) this payment record?'))return;await db.doc('fees/'+id).delete();await notify('A payment record was voided by '+me.name);go('fees')}
-async function postComment(id){if(!v('cm').trim())return;await add('comments',{studentId:id,text:v('cm').trim()});studentDash(id)}
+async function postComment(id){if(!v('cm').trim())return;await add('comments',{studentId:id,text:v('cm').trim()});studentDash(id,'ac')}
 
 // ----- NEW actions: classes, subjects, events, compute -----
 async function seedClasses(){const b=db.batch();CLASSES.forEach(n=>b.set(db.doc('classes/'+n.replace(/ /g,'_')),{name:n}));await b.commit();go('setup')}
@@ -482,30 +507,44 @@ async function rank(){
  $('#rk').innerHTML=`<div class="card"><h3>Class ranking</h3><table><tr><th>Pos</th><th>Student</th><th>Subjects</th><th>Total</th><th>Average</th><th>Grade</th></tr>${a.map((o,i)=>`<tr><td>${i+1}</td><td>${esc(o.n)}</td><td>${o.c}</td><td>${o.t}</td><td>${(o.t/o.c).toFixed(1)}</td><td>${grade(o.t/o.c)}</td></tr>`).join('')||'<tr><td>No scores yet.</td></tr>'}</table></div>`}
 
 // ---------- Student dashboard ----------
-async function studentDash(id){
+async function studentDash(id,tab){
  const s=(await db.doc('students/'+id).get()).data()||{},cn=s.class||'';
  const[r,f,c,cl,sj,ev,an,at]=await Promise.all([list('results',['studentId','==',id],['published','==',true]),list('fees',['studentId','==',id]),list('comments',['studentId','==',id]),list('classes',['name','==',cn]),list('subjects',['class','==',cn]),list('events'),list('announcements',['audience','==','students']),list('attendance',['uid','==',id])]);
  sj.sort((a,b)=>a.name.localeCompare(b.name));
  SD={id,s,r,f,c,at,cl:cl[0]||{},sj,ev:ev.sort((a,b)=>a.date>b.date?1:-1).filter(x=>x.date>=today()),an:an.sort((a,b)=>b.at-a.at).slice(0,3)};
- const T=[['ov','Overview'],['sb','Subjects'],['rs','Results'],['ac','Academic'],['dc','Documents']];
- set(`<div class="card hero"><img class="pic" src="${esc(s.photo||'')}"><div><h2>${esc((s.surname||'')+' '+(s.firstName||''))}</h2><p style="color:var(--mut)">ID: ${esc(s.regNo||'')} · ${esc(cn)} · ${esc(s.campus||'')}</p></div></div>
- <div class="tabs">${T.map(([k,l])=>`<button class="g" data-t="${k}" onclick="sdTab('${k}')">${l}</button>`).join('')}</div><div id="sdt"></div>`);
- sdTab('ov')}
+ const T=[['ov','Overview'],['sb','Subjects'],['rs','Results'],['ac','Academic'],['dc','Documents']],
+ paid=f.reduce((a,x)=>a+(+x.amount||0),0),due=+s.feeDue||0,fit=paid>=due,pc=due>0?Math.min(100,Math.round(paid/due*100)):100,
+ avg=r.length?(r.reduce((a,x)=>a+x.test+x.exam,0)/r.length).toFixed(1):'-',
+ att=at.length?Math.round(at.filter(a=>a.status!='Absent').length/at.length*100)+'%':'-',
+ li=(a,k)=>a.length?a.join(''):'<p class="mut">None yet.</p>',
+ item=(k,t,sub,d)=>`<div class="ev" style="--k:${k}"><div>${esc(t)}${sub?`<small>${esc(sub)}</small>`:''}</div><span class="dt">${esc(d)}</span></div>`,
+ nm=((s.firstName||'')+' '+(s.surname||'')).trim();
+ set(`<div class="sd">
+ <div class="card sdp">${s.photo?`<img class="ph" src="${esc(s.photo)}" alt="">`:`<div class="ph" style="display:grid;place-items:center;font-size:56px;margin:0 auto">${esc((s.firstName||'?')[0])}</div>`}
+ <h2>${esc(nm)}</h2><p class="mut">Student ID: ${esc(s.regNo||'-')}</p><p class="mut">${esc(cn||'-')} · ${esc(s.campus||'-')}</p>
+ <div class="trio"><div><span>Average</span><b>${avg}</b></div><div><span>Attendance</span><b>${att}</b></div><div><span>Fees</span><b class="${fit?'green':'red'}">${fit?'Fit':'Owing'}</b></div></div>
+ <div class="fb"><small>Fees paid ${pc}%</small><div class="bar"><i style="width:${pc}%"></i></div></div></div>
+ <div class="card sdm"><div class="sdtabs">${T.map(([k,l])=>`<a data-t="${k}" onclick="sdTab('${k}')">${l}</a>`).join('')}</div><div id="sdt"></div></div>
+ <div class="rc"><div class="card"><h4>Upcoming Events</h4>
+ <h5>General announcements</h5>${li(SD.an.map(x=>item('var(--pri)',x.title,'',new Date(x.at).toLocaleDateString())))}
+ <h5>Tests & exams</h5>${li(SD.ev.filter(x=>x.type=='Test/Exam').map(x=>item('var(--acc)',x.title,'',x.date)))}
+ <h5>Holidays</h5>${li(SD.ev.filter(x=>x.type=='Holiday').map(x=>item('var(--gold)',x.title,'',x.date)))}</div>
+ <div class="card"><h4>My Subjects (${sj.length})</h4>${sj.slice(0,6).map(x=>`<div class="sj"><span>${esc(x.name)}</span></div>`).join('')||'<p class="mut">No subjects set for this class yet.</p>'}${sj.length>6?`<p class="mut"><a style="cursor:pointer;color:var(--pri)" onclick="sdTab('sb')">See all ${sj.length}</a></p>`:''}</div></div></div>`);
+ sdTab(tab||'ov')}
+const ring=(p,t,sub)=>`<svg width="96" height="96" viewBox="0 0 96 96"><circle cx="48" cy="48" r="40" fill="none" stroke="var(--bd)" stroke-width="8"/><circle cx="48" cy="48" r="40" fill="none" stroke="var(--gold)" stroke-width="8" stroke-linecap="round" stroke-dasharray="${(p*2.513).toFixed(1)} 251.3" transform="rotate(-90 48 48)"/><text x="48" y="51" text-anchor="middle" font-size="18" font-weight="700" fill="var(--tx)">${t}</text><text x="48" y="66" text-anchor="middle" font-size="9" fill="var(--mut)">${sub}</text></svg>`;
 function sdTab(k){
- const{id,s,r,f,c,at,cl,sj,ev,an}=SD,paid=f.reduce((a,x)=>a+(+x.amount||0),0),due=+s.feeDue||0,fit=paid>=due;
- document.querySelectorAll('[data-t]').forEach(b=>{const on=b.dataset.t==k;b.style.background=on?'var(--pri)':'transparent';b.style.color=on?(document.body.classList.contains('student')?'#10213f':'#fff'):'var(--pri)'});
- const li=a=>a.length?'<ul>'+a.join('')+'</ul>':'<p style="color:var(--mut)">None yet.</p>',
- acSum=`<div class="card"><h3>Academic Summary</h3><p>Current Class: <b>${esc(s.class||'-')}</b><br>Academic Year: <b>${esc(s.session||'-')}</b><br>Class Teacher: <b>${esc(cl.teacherName||'Not assigned')}</b><br>Class Teacher's Contact: <b>${esc(cl.teacherPhone||'-')}</b></p></div>`;
+ const{id,s,r,f,c,at,cl,sj}=SD,paid=f.reduce((a,x)=>a+(+x.amount||0),0),due=+s.feeDue||0,fit=paid>=due,
+ here=at.filter(a=>a.status!='Absent').length,ap=at.length?Math.round(here/at.length*100):0;
+ document.querySelectorAll('[data-t]').forEach(b=>b.classList.toggle('on',b.dataset.t==k));
+ const acSum=`<div class="card"><h4>Academic Summary</h4><div class="sum"><p>Current Class: <b>${esc(s.class||'-')}</b><br>Academic Year: <b>${esc(s.session||'-')}</b><br>Class Teacher: <b>${esc(cl.teacherName||'Not assigned')}</b><br>Class Teacher's Contact: <b>${esc(cl.teacherPhone||'-')}</b></p>${ring(ap,at.length?ap+'%':'-','Attendance')}</div></div>`;
  const H={
- ov:`<div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(280px,1fr))">
- <div class="card"><h3>About</h3><p>${esc(s.about||'No story added yet.')}</p>${MG.includes(me.role)||me.uid==id?`<textarea id="ab" rows="3" placeholder="Write a short story about the student and their ambitions">${esc(s.about||'')}</textarea><button onclick="saveAbout()">Save</button>`:''}</div>
+ ov:`<div class="card"><h4>About</h4><p>${esc(s.about||'No story added yet.')}</p>${MG.includes(me.role)||me.uid==id?`<textarea id="ab" rows="3" placeholder="Write a short story about the student and their ambitions">${esc(s.about||'')}</textarea><button onclick="saveAbout()">Save</button>`:''}</div>
  ${acSum}
- <div class="card"><h3>Contact Info</h3><p>School E-mail: <b>${esc(SCHOOL.email)}</b><br>Phone: <b>${esc(SCHOOL.phone)}</b><br>Location: <b>${esc(SCHOOL.loc[s.campus]||s.campus||'-')}</b></p></div>
- <div class="card"><h3>Upcoming Events</h3><b>General Announcements</b>${li(an.map(x=>`<li>${esc(x.title)}</li>`))}<b>Tests & Exams</b>${li(ev.filter(x=>x.type=='Test/Exam').map(x=>`<li>${esc(x.date)} - ${esc(x.title)}</li>`))}<b>Holidays</b>${li(ev.filter(x=>x.type=='Holiday').map(x=>`<li>${esc(x.date)} - ${esc(x.title)}</li>`))}</div></div>`,
- sb:`<div class="card"><h3>Subjects - ${esc(s.class||'')}</h3>${sj.map(x=>`<span class="tag" style="background:var(--acc);display:inline-block;margin:3px">${esc(x.name)}</span>`).join('')||'No subjects set for this class yet.'}</div>`,
- rs:TRIS.map(t=>{const l=r.filter(x=>x.trimester==t);if(!l.length)return'';const tot=l.reduce((a,x)=>a+x.test+x.exam,0);return`<div class="card"><h3>${t} <small>(Total ${tot} · Avg ${(tot/l.length).toFixed(1)})</small></h3><table><tr><th>Subject</th><th>Test</th><th>Exam</th><th>Total</th><th>Grade</th></tr>${l.map(x=>{const n=x.test+x.exam;return`<tr><td>${esc(x.subject)}</td><td>${x.test}</td><td>${x.exam}</td><td class="${n<50?'red':'green'}">${n}</td><td>${grade(n)}</td></tr>`}).join('')}</table></div>`}).join('')||'<div class="card">Results not yet released.</div>',
- ac:acSum+`<div class="card"><h3>Attendance</h3><p>Days attended <b>${at.filter(a=>a.status!='Absent').length}/${at.length}</b></p></div><div class="card"><h3>Fees</h3><p>Paid <b>${money(paid)}</b> · Balance <b>${money(Math.max(due-paid,0))}</b> · Status <b class="${fit?'green':'red'}">${fit?'Fit':'Owing'}</b></p></div><div class="card"><h3>Comments</h3>${c.map(x=>`<p><b>${esc(x.byName)}</b>: ${esc(x.text)}</p>`).join('')}<input id="cm" placeholder="Write a comment"><button onclick="postComment('${id}')">Post</button></div>`,
- dc:`<div class="card"><h3>Payment Receipts</h3><table>${f.map(x=>`<tr><td>${new Date(x.at).toLocaleDateString()}</td><td>${esc(x.type)}</td><td>${money(x.amount)}</td><td><button class="g" onclick="receipt('${x.id}')">Print</button></td></tr>`).join('')||'<tr><td>No receipts.</td></tr>'}</table></div><div class="card"><h3>Result Slips</h3>${TRIS.filter(t=>r.some(x=>x.trimester==t)).map(t=>`<button class="g" onclick="slip('${t}')">${t}</button> `).join('')||'No released results yet.'}</div>`};
+ <div class="card"><h4>Contact Info</h4><p style="line-height:1.9;margin:0">School E-mail: <b>${esc(SCHOOL.email)}</b><br>Phone: <b>${esc(SCHOOL.phone)}</b><br>Location: <b>${esc(SCHOOL.loc[s.campus]||s.campus||'-')}</b></p></div>`,
+ sb:`<div class="card"><h4>Subjects - ${esc(s.class||'')}</h4><table><tr><th>Subject</th><th>Latest total</th><th>Grade</th></tr>${sj.map(x=>{const l=r.filter(y=>y.subject==x.name).sort((a,b)=>TRIS.indexOf(b.trimester)-TRIS.indexOf(a.trimester))[0],n=l?l.test+l.exam:null;return`<tr><td>${esc(x.name)}</td><td>${n==null?'-':n}</td><td>${n==null?'-':grade(n)}</td></tr>`}).join('')||'<tr><td>No subjects set for this class yet.</td></tr>'}</table></div>`,
+ rs:TRIS.map(t=>{const l=r.filter(x=>x.trimester==t);if(!l.length)return'';const tot=l.reduce((a,x)=>a+x.test+x.exam,0);return`<div class="card"><h4>${t} <small>(Total ${tot} · Avg ${(tot/l.length).toFixed(1)})</small></h4><table><tr><th>Subject</th><th>Test</th><th>Exam</th><th>Total</th><th>Grade</th></tr>${l.map(x=>{const n=x.test+x.exam;return`<tr><td>${esc(x.subject)}</td><td>${x.test}</td><td>${x.exam}</td><td class="${n<50?'red':'green'}">${n}</td><td>${grade(n)}</td></tr>`}).join('')}</table></div>`}).join('')||'<div class="card">Results not yet released.</div>',
+ ac:acSum+`<div class="card"><h4>Attendance</h4><p>Days attended <b>${here}/${at.length}</b></p></div><div class="card"><h4>Fees</h4><p>Paid <b>${money(paid)}</b> · Balance <b>${money(Math.max(due-paid,0))}</b> · Status <b class="${fit?'green':'red'}">${fit?'Fit':'Owing'}</b></p></div><div class="card"><h4>Comments</h4>${c.map(x=>`<p><b>${esc(x.byName)}</b>: ${esc(x.text)}</p>`).join('')}<input id="cm" placeholder="Write a comment"><button onclick="postComment('${id}')">Post</button></div>`,
+ dc:`<div class="card"><h4>Payment Receipts</h4><table>${f.map(x=>`<tr><td>${new Date(x.at).toLocaleDateString()}</td><td>${esc(x.type)}</td><td>${money(x.amount)}</td><td><button class="g" onclick="receipt('${x.id}')">Print</button></td></tr>`).join('')||'<tr><td>No receipts.</td></tr>'}</table></div><div class="card"><h4>Result Slips</h4>${TRIS.filter(t=>r.some(x=>x.trimester==t)).map(t=>`<button class="g" onclick="slip('${t}')">${t}</button> `).join('')||'No released results yet.'}</div>`};
  $('#sdt').innerHTML=H[k]}
 async function saveAbout(){const t=v('ab').trim();await db.doc('students/'+SD.id).update({about:t});SD.s.about=t;sdTab('ov')}
 function slip(t){const l=SD.r.filter(x=>x.trimester==t),s=SD.s,w=window.open('');if(!w)return alert('Allow pop-ups.');
