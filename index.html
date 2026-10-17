@@ -1,5 +1,8 @@
 <!DOCTYPE html><html><head><base target="_top"><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Divine Seeds International Schools - Portal</title>
+<meta name="theme-color" content="#10213f">
+<link rel="icon" type="image/png" href="./logo.png"><link rel="apple-touch-icon" href="./logo.png"><link rel="manifest" href="./manifest.webmanifest">
 <link rel="preconnect" href="https://identitytoolkit.googleapis.com"><link rel="preconnect" href="https://firestore.googleapis.com"><link rel="preconnect" href="https://securetoken.googleapis.com">
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
@@ -14,14 +17,14 @@ body.student{--bg:#0e1a2e;--card:#16253d;--tx:#eef2fa;--mut:#9fb0cc;--bd:#243656
 input,select,textarea,button{font:inherit;padding:10px 12px;border-radius:10px;border:1px solid var(--bd);width:100%;margin:5px 0;background:var(--card);color:var(--tx)}
 .lbox input{background:#fff;color:#10213f}
 button{background:var(--pri);color:#fff;border:0;cursor:pointer;font-weight:600;width:auto}body.student button{color:#10213f}
-button.s{background:var(--acc);color:#fff}button.g{background:transparent;color:var(--pri);border:1px solid var(--pri)}
+button.s{background:var(--acc);color:#fff}button.g{background:transparent;color:var(--pri);border:1px solid var(--pri)}body.student button.g{color:var(--gold);border-color:var(--gold)}
 .pw{position:relative}.pw input{padding-right:44px}.pw span{position:absolute;right:12px;top:50%;transform:translateY(-50%);cursor:pointer;user-select:none;font-size:18px}
 .flink{display:block;margin-top:8px;font-size:13px;color:#1c3f94;cursor:pointer;text-decoration:underline}
 #appBox{display:none;grid-template-columns:240px 1fr;min-height:100vh}
 aside{background:var(--side);color:#fff;padding:16px;position:sticky;top:0;height:100vh;overflow:auto}
-aside img{width:70px;height:70px;object-fit:contain;display:block;margin:0 auto 6px}aside h4{text-align:center;margin:0 0 14px;font-size:13px;color:var(--gold)}
-aside a{display:block;padding:10px 12px;border-radius:10px;color:#cfd9ee;cursor:pointer;margin:2px 0}aside a:hover,aside a.on{background:#ffffff22;color:#fff}
-main{padding:20px;overflow:hidden}.top{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;gap:10px}
+aside img{width:110px;height:110px;object-fit:contain;display:block;margin:0 auto 6px}aside h4{text-align:center;margin:0 0 14px;font-size:13px;color:var(--gold)}
+aside a{display:block;padding:10px 12px;border-radius:10px;color:#cfd9ee;cursor:pointer;margin:2px 0}aside a:hover,aside a.on{background:#ffffff22;color:#fff}aside a.on{box-shadow:inset 3px 0 0 var(--acc)}
+main{padding:20px;overflow:hidden}.top{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;gap:10px;padding-bottom:10px;border-bottom:3px solid;border-image:linear-gradient(90deg,#1c3f94,#e0147a,#f5b700) 1}
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}.card{background:var(--card);border:1px solid var(--bd);border-radius:16px;padding:18px;margin-bottom:14px}
 .stat b{font-size:24px;display:block}.stat span{color:var(--mut);font-size:13px}
 .hero{display:flex;gap:20px;align-items:center;flex-wrap:wrap}.pic{width:120px;height:120px;border-radius:50%;object-fit:cover;border:4px solid var(--gold);background:#ccd}
@@ -30,6 +33,10 @@ table{width:100%;border-collapse:collapse;font-size:14px;display:block;overflow-
 .row{display:flex;gap:8px;flex-wrap:wrap}.row>*{flex:1;min-width:130px}.row>button{flex:0 0 auto}
 .tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}.tabs button{margin:0}
 #menu{display:none}
+#tlogo{display:none;width:38px;height:38px;object-fit:contain}
+.just{text-align:justify}
+.rscroll{max-height:60vh;overflow:auto;padding-right:6px}
+.annbox{max-height:260px;overflow:auto}
 /* ---- Student dashboard ---- */
 .sd{display:grid;grid-template-columns:270px minmax(0,1fr) 310px;gap:16px;align-items:start}
 .sd>.card{margin:0}.mut{color:var(--mut);margin:2px 0;font-size:13px}
@@ -55,7 +62,7 @@ table{width:100%;border-collapse:collapse;font-size:14px;display:block;overflow-
 .sj{display:flex;justify-content:space-between;padding:9px 12px;border-radius:10px;background:var(--bg);border-left:3px solid var(--gold);margin-bottom:7px;font-size:14px}
 @media(max-width:1100px){.sd{grid-template-columns:260px minmax(0,1fr)}.sd .rc{grid-column:1/-1}}
 @media(max-width:800px){.sd{grid-template-columns:1fr}.sdm{padding:14px}}
-@media(max-width:800px){#appBox{grid-template-columns:1fr}aside{position:fixed;left:-260px;width:240px;z-index:9;transition:.2s}aside.open{left:0}#menu{display:inline-block}}
+@media(max-width:800px){#appBox{grid-template-columns:1fr}aside{position:fixed;left:-260px;width:240px;z-index:9;transition:.2s}aside.open{left:0}#menu{display:inline-block}#tlogo{display:inline-block}}
 </style></head><body>
 <div id="loginBox"><div class="lbox"><img src="" id="lg" alt="Divine Seeds International Schools logo" onerror="this.style.display='none'"><h2>DIVINE SEEDS INTERNATIONAL EKET</h2><small>Training Godly Future Champions</small><br><br>
 <input id="u" placeholder="Username / ID or email" autocomplete="username">
@@ -64,7 +71,7 @@ table{width:100%;border-collapse:collapse;font-size:14px;display:block;overflow-
 <button class="g" onclick="bio()" style="width:100%">Sign in with Fingerprint</button>
 <a class="flink" onclick="forgot()">Forgot password?</a>
 <p id="info" class="green"></p><p id="err" class="red"></p></div></div>
-<div id="appBox"><aside id="side"></aside><main><div class="top"><button id="menu" onclick="side.classList.toggle('open')">☰</button><h2 id="ttl"></h2><div><span id="bell" style="cursor:pointer" onclick="go('notes')">🔔</span> <button class="g" id="lockBtn" onclick="lock()" style="display:none">🔒 Lock</button> <button class="g" onclick="auth.signOut()">Logout</button></div></div><div id="main"></div></main></div>
+<div id="appBox"><aside id="side"></aside><main><div class="top"><button id="menu" onclick="side.classList.toggle('open')">☰</button><img id="tlogo" src="" alt="" onerror="this.style.display='none'"><h2 id="ttl"></h2><div><span id="bell" style="cursor:pointer" onclick="go('notes')">🔔</span> <button class="g" id="lockBtn" onclick="lock()" style="display:none">🔒 Lock</button> <button class="g" onclick="auth.signOut()">Logout</button></div></div><div id="main"></div></main></div>
 <script>
 const LOGO_URL="./logo.png"; // logo.png must sit in the same folder as this page (GitHub Pages)
 const CFG={apiKey:"AIzaSyDLryqwFI885uE0xQzSUN2Qo0MZZoDxVm0",authDomain:"divine-seeds-portal.firebaseapp.com",projectId:"divine-seeds-portal",storageBucket:"divine-seeds-portal.firebasestorage.app",messagingSenderId:"151651524541",appId:"1:151651524541:web:cd28e4cefe26d72f6a7cd4"};
@@ -81,18 +88,20 @@ const TRIS=['1st Trimester','2nd Trimester','3rd Trimester'];
 const grade=n=>n>=70?'A':n>=60?'B':n>=50?'C':n>=40?'D':'F';
 const subId=(c,n)=>(c+'_'+n).replace(/[\/\s]+/g,'_').toLowerCase();
 let me,photo='',FEE={st:[],paid:{},fs:[],owing:[]},TEACH=[],SD={};
+let PUB={r:[]},PUBV=[],MS=[],PR=[];
+const REM={A:'Excellent',B:'Very good',C:'Good',D:'Fair',F:'Needs improvement'};
 const loginBox=$('#loginBox'),appBox=$('#appBox'),side=$('#side'),err=$('#err'),info=$('#info'),ttl=$('#ttl'),mainEl=$('#main');
-$('#lg').src=LOGO_URL;
+$('#lg').src=LOGO_URL;$('#tlogo').src=LOGO_URL;
 function togglePw(){const i=$('#p'),s=i.type=='password';i.type=s?'text':'password';$('#eye').textContent=s?'🙈':'👁️'}
 // Apps Script runs pages in a sandboxed iframe, so fall back if browser storage is blocked
 const P=firebase.auth.Auth.Persistence;const ready=(async()=>{for(const m of [P.LOCAL,P.SESSION,P.NONE]){try{await auth.setPersistence(m);return}catch(e){}}})();
 
 const MENU={student:['dash:Dashboard','news:Announcements','acct:My Account'],
-teacher:['dash:My Dashboard','comp:Compute Results','roll:Class Attendance','attend:Attendance','news:Announcements','acct:My Account'],
+teacher:['comp:Compute Results','roll:Take Attendance'],
 staff:['dash:My Dashboard','attend:Attendance','news:Announcements','acct:My Account'],
 accountant:['fees:Fees & Payments','dash:My Dashboard','attend:Attendance','news:Announcements','acct:My Account'],
 confectionery:['dash:My Dashboard','bread:Confectionery','attend:Attendance','news:Announcements','acct:My Account'],
-principal:['mgmt:Overview','reg:Registration','fees:Fees & Payments','setup:Classes & Teachers','subj:Subjects Template','comp:Compute Results','pub:Validate Results','events:Events Calendar','news:Post Announcement','roll:Take Attendance','attend:Attendance','bread:Confectionery','notes:Notifications','acct:My Account']};
+principal:['mgmt:Overview','reg:Registration','fees:Fees & Payments','setup:Classes & Teachers','subj:Subjects Template','comp:Compute Results','pub:Validate & Correct Results','events:Events Calendar','promote:Promote Students','news:Post Announcement','roll:Take Attendance','attend:Attendance','bread:Confectionery','notes:Notifications','acct:My Account']};
 MENU.proprietor=MENU.admin=[...MENU.principal,'staffreg:Staff & Roles','stat:Stationery','reset:Reset'];
 
 let unlocked=false;
@@ -181,7 +190,7 @@ const list=async(c,...f)=>{let q=db.collection(c);f.forEach(x=>q=q.where(...x));
 const notify=m=>add('notifications',{msg:m,to:MG});
 const set=h=>mainEl.innerHTML=h;
 const opts=a=>a.map(x=>`<option>${esc(x)}</option>`).join('');
-function go(k){document.querySelectorAll('aside a').forEach(a=>a.classList.toggle('on',a.dataset.k==k));side.classList.remove('open');
+function go(k){if(!(MENU[me.role]||MENU.staff).some(x=>x.split(':')[0]==k))return;document.querySelectorAll('aside a').forEach(a=>a.classList.toggle('on',a.dataset.k==k));side.classList.remove('open');
  const a=document.querySelector(`aside a[data-k="${k}"]`);ttl.textContent=a?a.textContent:'';mainEl.innerHTML='<div class="card">Loading...</div>';Promise.resolve(V[k]()).then(fillBio)}
 function F(a){return a.map(([k,l,o])=>o&&o!='date'&&o!='number'&&o!='email'?`<select id="f_${k}"><option value="">${l}</option>${o.split(',').map(x=>`<option>${x}</option>`).join('')}</select>`:`<input id="f_${k}" type="${o||'text'}" placeholder="${l}">`).join('')}
 const G=()=>Object.fromEntries([...document.querySelectorAll('[id^=f_]')].map(e=>[e.id.slice(2),e.value.trim()]));
@@ -199,18 +208,30 @@ async dash(){
 async news(){
  const mg=MG.includes(me.role),a=(await list('announcements',...(mg?[]:[['audience','==',me.role=='student'?'students':'staff']]))).sort((x,y)=>y.at-x.at);
  set((mg?`<div class="card"><h3>Post Announcement</h3><select id="aud"><option value="students">Students</option><option value="staff">Teachers & Staff</option></select><input id="ann_t" placeholder="Title"><textarea id="ann_b" placeholder="Message"></textarea><button onclick="postNews()">Publish</button></div>`:'')+
- (a.map(x=>`<div class="card"><b>${esc(x.title)}</b> <span class="tag" style="background:var(--acc)">${esc(x.audience)}</span><p>${esc(x.body)}</p><small>${esc(x.byName)} · ${new Date(x.at).toLocaleString()}</small></div>`).join('')||'<div class="card">No announcements yet.</div>'))},
+ (a.map(x=>`<div class="card">${mg?`<button class="s" style="float:right" onclick="delNews('${x.id}','news')">Remove</button>`:''}<b>${esc(x.title)}</b> <span class="tag" style="background:var(--acc)">${esc(x.audience)}</span><p>${esc(x.body)}</p><small>${esc(x.byName)} · ${new Date(x.at).toLocaleString()}</small></div>`).join('')||'<div class="card">No announcements yet.</div>'))},
 async attend(){
  const ex=await db.doc('attendance/'+today()+'_'+me.uid).get();
  set(`<div class="card"><h3>Working-hours Attendance (Staff)</h3><p>Clock in before <b>08:00</b> to be Present. Later or no clock-in = Absent and a ₦1,000 fine.</p>
  ${ex.exists?`<p class="green">Recorded: ${esc(ex.data().status)} at ${esc(ex.data().time)}</p>`:`<button onclick="clock()">👆 Fingerprint Clock-In</button>${bioGet(me.uid)?'':'<p><small>Tip: enable fingerprint in My Account to require a fingerprint check here.</small></p>'}`}</div>`)},
 async pub(){
- const r=await list('results',['published','==',false]);
- set(`<div class="card"><h3>Results awaiting validation</h3><table><tr><th>Student</th><th>Class</th><th>Subject</th><th>Trimester</th><th>Total</th><th></th></tr>${r.map(x=>`<tr><td>${esc(x.studentName)}</td><td>${esc(x.class||'')}</td><td>${esc(x.subject)}</td><td>${esc(x.trimester)}</td><td>${x.test+x.exam}</td><td><button onclick="publish('${x.id}')">Validate</button></td></tr>`).join('')||'<tr><td>Nothing waiting.</td></tr>'}</table>${r.length?'<button class="s" onclick="publishAll()">Validate all</button>':''}</div>`)},
+ PUB={r:await list('results')};
+ set(`<div class="card"><h3>Validate & Correct Results</h3><p><small>Correct the Test (40) and Exam (60) scores if needed, then press Save. Validate releases a result to the student. Withdraw returns a validated result to Pending so it can be corrected.</small></p>
+ <div class="row"><select id="pb_s" onchange="drawPub()"><option value="p">Pending validation</option><option value="v">Validated</option><option value="a">All</option></select><select id="pb_c" onchange="drawPub()"><option value="">All classes</option>${opts(CLASSES)}</select><select id="pb_t" onchange="drawPub()"><option value="">All trimesters</option>${opts(TRIS)}</select><input id="pb_q" placeholder="🔍 Student or subject" oninput="drawPub()"></div></div>
+ <div class="card"><p id="pb_n"></p><table><tr><th>Student</th><th>Class</th><th>Session</th><th>Subject</th><th>Trimester</th><th>Test /40</th><th>Exam /60</th><th>Total</th><th>Status</th><th></th></tr><tbody id="pb_b"></tbody></table><button class="s" onclick="validateShown()">Validate all pending shown</button></div>`);
+ drawPub()},
 async mgmt(){
- const[s,t,n]=await Promise.all([list('students'),list('staff'),list('attendance',['date','==',today()])]);
- set(`<div class="grid"><div class="card stat"><span>Students</span><b>${s.length}</b></div><div class="card stat"><span>Staff</span><b>${t.length}</b></div><div class="card stat"><span>Staff present today</span><b class="green">${n.filter(x=>x.status=='Present').length}</b></div></div>
- <div class="card"><h3>Students</h3><table><tr><th>ID</th><th>Name</th><th>Class</th><th>Campus</th><th></th></tr>${s.map(x=>`<tr><td>${esc(x.regNo)}</td><td>${esc(x.surname)} ${esc(x.firstName)}</td><td>${esc(x.class)}</td><td>${esc(x.campus)}</td><td><button class="g" onclick="studentDash('${x.id}')">Open</button></td></tr>`).join('')}</table></div>`)},
+ const[s,t,n]=await Promise.all([list('students'),list('staff'),list('attendance',['date','==',today()])]);MS=s;
+ const act=s.filter(x=>x.status!='Graduated').length;
+ set(`<div class="grid"><div class="card stat"><span>Active students</span><b>${act}</b></div><div class="card stat"><span>Graduated (records kept)</span><b>${s.length-act}</b></div><div class="card stat"><span>Staff</span><b>${t.length}</b></div><div class="card stat"><span>Staff present today</span><b class="green">${n.filter(x=>x.status=='Present').length}</b></div></div>
+ <div class="card"><h3>Students</h3><div class="row"><input id="ms_q" placeholder="🔍 Search name or ID" oninput="drawStu()"><select id="ms_f" onchange="drawStu()"><option value="A">Active</option><option value="G">Graduated</option><option value="">All</option></select></div><table><tr><th>ID</th><th>Name</th><th>Class</th><th>Campus</th><th>Status</th><th></th></tr><tbody id="stuTb"></tbody></table></div>`);
+ drawStu()},
+async promote(){
+ PR=(await list('students')).filter(x=>x.status!='Graduated');
+ const cnt=c=>PR.filter(x=>x.class==c).length,other=PR.filter(x=>!CLASSES.includes(x.class)).length;
+ set(`<div class="card"><h3>Promote Students to the Next Class</h3><p>Use this at the end of the academic year. Every student moves up one class. SS3 students graduate: their accounts and records are kept for future reference, but they no longer appear in class lists.</p>
+ <table><tr><th>Current class</th><th>Students</th><th>Moves to</th></tr>${CLASSES.map(c=>`<tr><td>${c}</td><td>${cnt(c)}</td><td>${nextClass(c)||'<b>Graduates (record kept)</b>'}</td></tr>`).join('')}</table>
+ ${other?`<p class="red">${other} student(s) have a class outside the standard list and will be skipped. Set their class under Overview first.</p>`:''}
+ <input id="pm_s" placeholder="New academic session, e.g. 2027/2028"><input id="pm_f" type="number" min="0" placeholder="Add to each promoted student's fees due (₦, optional)"><button class="s" onclick="doPromote()">Promote all students</button><p id="pm_msg"></p></div>`)},
 reg(){photo='';FP={t:[]};set(`<div class="card"><h3>Student Registration</h3><div class="grid">${F([['surname','Surname'],['firstName','First name'],['middleName','Middle name'],['gender','Gender','Male,Female'],['dob','Date of birth','date'],['pob','Place of birth'],['nationality','Nationality'],['state','State of origin'],['lga','LGA'],['address','Residential address'],['phone','Phone'],['email','Student email (optional)','email'],['indigene','Status','Indigene,Non-Indigene'],['level','Section','Creche,Nursery,Primary,Junior High School,Senior High School'],['class','Class',CLASSES.join(',')],['session','Session (2026/2027)'],['campus','Campus','Ediam,Ikot Oso'],['boarding','Boarding?','Day,Boarding'],['father','Father name'],['fatherPhone','Father phone'],['mother','Mother name'],['motherPhone','Mother phone'],['guardianEmail','Parent email (REQUIRED - the same email can be used for many children)','email'],['emName','Emergency contact'],['emPhone','Emergency phone'],['blood','Blood group'],['genotype','Genotype'],['allergies','Allergies'],['about','About the student (short story and ambitions)'],['feeDue','Total fees due (₦)','number']])}</div>
  <p><b>Biometric ID</b> <small>(auto-numbered. Enrol this number on the fingerprint scanner so attendance can be taken)</small></p><input id="f_bioId" type="number">${FPUI}
  <p>Passport photo:</p><input type="file" accept="image/*" capture="user" onchange="snap(this)"><img id="pv" class="pic"><br><button onclick="regStudent()">Register & Create Account</button><p id="rmsg"></p></div>`)},
@@ -352,6 +373,61 @@ async function publishAll(){
  const docs=(await db.collection('results').where('published','==',false).get()).docs;
  for(let i=0;i<docs.length;i+=400){const b=db.batch();docs.slice(i,i+400).forEach(d=>b.update(d.ref,{published:true}));await b.commit()}
  await notify('All pending results validated');go('pub')}
+const nextClass=c=>CLASSES.includes(c)?CLASSES[CLASSES.indexOf(c)+1]:undefined,
+ levelOf=c=>c=='Creche'?'Creche':c.startsWith('Nursery')?'Nursery':c.startsWith('Primary')?'Primary':c.startsWith('JSS')?'Junior High School':'Senior High School';
+async function delNews(id,w){
+ if(!confirm('Remove this announcement?'))return;
+ try{await db.doc('announcements/'+id).delete();if(w=='sd')studentDash(SD.id,SD.tab);else go('news')}catch(e){alert('Could not remove: '+(e.code||e.message))}}
+function drawPub(){
+ const st=v('pb_s'),c=v('pb_c'),t=v('pb_t'),q=v('pb_q').trim().toLowerCase();
+ PUBV=PUB.r.filter(x=>(st=='a'||(st=='p')==!x.published)&&(!c||x.class==c)&&(!t||x.trimester==t)&&((x.studentName||'')+' '+(x.subject||'')).toLowerCase().includes(q)).sort((a,b)=>(a.class||'').localeCompare(b.class||'')||(a.studentName||'').localeCompare(b.studentName||'')||(a.subject||'').localeCompare(b.subject||'')).slice(0,200);
+ $('#pb_n').textContent=PUBV.length+' result(s) shown'+(PUBV.length==200?' (first 200 only; use the filters to narrow down)':'');
+ $('#pb_b').innerHTML=PUBV.map((x,i)=>`<tr><td>${esc(x.studentName)}</td><td>${esc(x.class||'-')}</td><td>${esc(x.session||'-')}</td><td>${esc(x.subject)}</td><td>${esc(x.trimester)}</td><td><input id="pt_${i}" type="number" min="0" max="40" value="${x.test}" oninput="pTot(${i})" style="width:70px;margin:0"></td><td><input id="pe_${i}" type="number" min="0" max="60" value="${x.exam}" oninput="pTot(${i})" style="width:70px;margin:0"></td><td id="pg_${i}">${x.test+x.exam} (${grade(x.test+x.exam)})</td><td class="${x.published?'green':''}">${x.published?'Validated':'Pending'}</td><td><button class="g" onclick="saveRes(${i})">Save</button> ${x.published?`<button class="g" onclick="unpub(${i})">Withdraw</button>`:`<button onclick="saveRes(${i},true)">Validate</button>`}</td></tr>`).join('')||'<tr><td>Nothing to show.</td></tr>'}
+function pTot(i){const n=(+v('pt_'+i)||0)+(+v('pe_'+i)||0);$('#pg_'+i).textContent=n+' ('+grade(n)+')'}
+function pVals(i){const t=+v('pt_'+i),e=+v('pe_'+i);if(!(t>=0&&t<=40)||!(e>=0&&e<=60)){alert('Test must be 0-40 and exam 0-60.');return null}return{test:t,exam:e}}
+async function saveRes(i,pub){
+ const x=PUBV[i],n=pVals(i);if(!n)return;
+ const u={...n,correctedBy:me.name,correctedAt:Date.now()};if(pub===true)u.published=true;
+ try{await db.doc('results/'+x.id).update(u);Object.assign(x,u);if(pub===true)await notify('Result validated: '+x.studentName+' - '+x.subject);drawPub()}
+ catch(e){alert('Could not save: '+(e.code||e.message))}}
+async function unpub(i){
+ const x=PUBV[i];if(!confirm('Withdraw this validated result? The student will no longer see it until you validate it again.'))return;
+ try{await db.doc('results/'+x.id).update({published:false});x.published=false;drawPub()}catch(e){alert('Could not withdraw: '+(e.code||e.message))}}
+async function validateShown(){
+ const rows=PUBV.map((x,i)=>({x,i})).filter(o=>!o.x.published);
+ if(!rows.length)return alert('No pending results shown.');
+ if(!confirm('Validate '+rows.length+' pending result(s) shown?'))return;
+ const b=db.batch();
+ for(const o of rows){const n=pVals(o.i);if(!n)return;b.update(db.doc('results/'+o.x.id),{...n,published:true})}
+ try{await b.commit();rows.forEach(o=>o.x.published=true);await notify('Results validated ('+rows.length+')');drawPub()}catch(e){alert('Could not validate: '+(e.code||e.message))}}
+function drawStu(){
+ const q=v('ms_q').trim().toLowerCase(),f=v('ms_f');
+ const rows=MS.filter(x=>(f==''||(f=='G')==(x.status=='Graduated'))&&((x.surname||'')+' '+(x.firstName||'')+' '+(x.regNo||'')).toLowerCase().includes(q)).sort((a,b)=>(a.surname||'').localeCompare(b.surname||''));
+ $('#stuTb').innerHTML=rows.map(x=>{const g=x.status=='Graduated',cs=g?esc(x.class||''):`<select onchange="setClass('${x.id}',this.value)" style="width:130px;margin:0">${CLASSES.includes(x.class)?'':`<option selected>${esc(x.class||'')}</option>`}${CLASSES.map(c=>`<option ${c==x.class?'selected':''}>${c}</option>`).join('')}</select>`;
+  return`<tr><td>${esc(x.regNo)}</td><td>${esc(x.surname)} ${esc(x.firstName)}</td><td>${cs}</td><td>${esc(x.campus)}</td><td class="${g?'':'green'}">${g?'Graduated '+esc(x.graduatedOn||''):'Active'}</td><td><button class="g" onclick="studentDash('${x.id}')">Open</button></td></tr>`}).join('')||'<tr><td>No students found.</td></tr>'}
+async function setClass(id,c){
+ try{await db.doc('students/'+id).update({class:c,level:levelOf(c)});const x=MS.find(y=>y.id==id);if(x)x.class=c}catch(e){alert('Could not change class: '+(e.code||e.message))}}
+async function doPromote(){
+ const ses=v('pm_s').trim(),fa=+v('pm_f')||0,m=$('#pm_msg'),list2=PR.filter(x=>CLASSES.includes(x.class));
+ if(!/^\d{4}\/\d{4}$/.test(ses)){m.className='red';m.textContent='Enter the new session like 2027/2028.';return}
+ if(!list2.length){m.className='red';m.textContent='There are no students to promote.';return}
+ const grads=list2.filter(x=>!nextClass(x.class)).length;
+ if(prompt('This moves '+(list2.length-grads)+' student(s) up one class and graduates '+grads+' SS3 student(s) (their records are kept).\nNew session: '+ses+'\n\nType PROMOTE to confirm.')!=='PROMOTE')return;
+ m.className='';m.textContent='Promoting...';
+ try{
+  const FV=firebase.firestore.FieldValue;
+  for(let i=0;i<list2.length;i+=200){const b=db.batch();
+   list2.slice(i,i+200).forEach(x=>{
+    const nx=nextClass(x.class),h=FV.arrayUnion({session:x.session||'',class:x.class});
+    let u;
+    if(nx){u={class:nx,level:levelOf(nx),session:ses,history:h};if(fa)u.feeDue=FV.increment(fa)}
+    else u={status:'Graduated',graduatedOn:x.session||ses,graduatedAt:Date.now(),history:h};
+    b.update(db.doc('students/'+x.id),u)});
+   await b.commit()}
+  await notify('Promotion done for '+ses+': '+(list2.length-grads)+' promoted, '+grads+' graduated');
+  m.className='green';m.textContent='Done: '+(list2.length-grads)+' promoted, '+grads+' graduated. Accounts and records are kept.';
+  go('promote');
+ }catch(e){m.className='red';m.textContent='Could not finish: '+(e.code||e.message)+'. Check your Firestore rules.'}}
 async function saveBread(open){
  const p=+v('bp')||0,s=+v('bs')||0,x=+v('bx')||0;
  if(open+p-s-x<0)return alert('Negative stock not allowed');
@@ -415,7 +491,8 @@ async function loadRoll(){
  const kind=v('r_k')||'student',d=v('r_d')||today(),tc=me.role==='teacher',f=[['date','==',d]];
  if(tc)f.push(['kind','==','student']);
  try{
-  const[pp,rc]=await Promise.all([list(kind=='staff'?'staff':'students'),list('attendance',...f)]);
+  const[pp0,rc,oc]=await Promise.all([list(kind=='staff'?'staff':'students'),list('attendance',...f),tc?list('classes',['teacherId','==',me.uid]):Promise.resolve([])]);
+  const own=oc.map(x=>x.name),pp=kind=='staff'?pp0:pp0.filter(x=>x.status!='Graduated'&&(!own.length||own.includes(x.class)));
   ROLL={kind,d,ppl:pp.map(x=>kind=='staff'?{id:x.id,name:x.name,cls:x.position||'',bio:x.bioId,fp:x.fpEnrolled}:{id:x.id,name:(x.surname||'')+' '+(x.firstName||''),cls:x.class||'',bio:x.bioId,fp:x.fpEnrolled}).sort((a,b)=>a.name.localeCompare(b.name)),rec:{}};
   rc.forEach(r=>ROLL.rec[r.uid]=r);drawRoll();
  }catch(e){$('#r_list').textContent='Could not load: '+(e.code||e.message)}}
@@ -486,23 +563,27 @@ async function delEvent(id){await db.doc('events/'+id).delete();go('events')}
 async function compClass(){const s=await list('subjects',['class','==',v('cp_c')]);s.sort((a,b)=>a.name.localeCompare(b.name));$('#cp_s').innerHTML=s.map(x=>`<option>${esc(x.name)}</option>`).join('')||'<option value="">No subjects (add in template)</option>';loadComp()}
 async function loadComp(){
  const c=v('cp_c'),t=v('cp_t'),sj=v('cp_s'),o=$('#cp_out');if(!sj){o.innerHTML='<div class="card">No subjects for this class yet. Add them under Subjects Template.</div>';return}
- const[st,r]=await Promise.all([list('students',['class','==',c]),list('results',['class','==',c],['trimester','==',t],['subject','==',sj])]),m={};
- st.sort((a,b)=>(a.surname||'').localeCompare(b.surname||''));r.forEach(x=>m[x.studentId]=x);
- o.innerHTML=`<div class="card"><table><tr><th>Student</th><th>Test /40</th><th>Exam /60</th><th>Total</th><th>Grade</th><th>Status</th></tr>${st.map(s=>{const x=m[s.id]||{};return`<tr><td>${esc(s.surname+' '+s.firstName)}</td><td><input class="cs" data-i="${s.id}" data-k="test" data-n="${esc(s.surname+' '+s.firstName)}" type="number" min="0" max="40" value="${x.test??''}" oninput="rowTot(this)" style="width:80px"></td><td><input class="cs" data-i="${s.id}" data-k="exam" type="number" min="0" max="60" value="${x.exam??''}" oninput="rowTot(this)" style="width:80px"></td><td id="t_${s.id}"></td><td id="g_${s.id}"></td><td>${x.published?'<span class="green">Validated</span>':x.studentId?'Pending':''}</td></tr>`}).join('')||'<tr><td>No students in this class.</td></tr>'}</table><button onclick="saveComp()">Save scores</button> <button class="g" onclick="rank()">Class ranking</button></div><div id="rk"></div>`;
+ const[st0,r]=await Promise.all([list('students',['class','==',c]),list('results',['class','==',c],['trimester','==',t],['subject','==',sj])]),m={};
+ const st=st0.filter(x=>x.status!='Graduated').sort((a,b)=>(a.surname||'').localeCompare(b.surname||''));
+ r.forEach(x=>(m[x.studentId]=m[x.studentId]||[]).push(x));
+ const pick=s=>(m[s.id]||[]).find(x=>!x.session||x.session==(s.session||''))||{};
+ o.innerHTML=`<div class="card"><table><tr><th>Student</th><th>Test /40</th><th>Exam /60</th><th>Total</th><th>Grade</th><th>Status</th></tr>${st.map(s=>{const x=pick(s),d=x.published?'disabled':'',nm=esc(s.surname+' '+s.firstName);return`<tr><td>${nm}</td><td><input class="cs" data-i="${s.id}" data-k="test" data-n="${nm}" data-s="${esc(s.session||'')}" data-d="${esc(x.id||'')}" type="number" min="0" max="40" value="${x.test??''}" oninput="rowTot(this)" style="width:80px" ${d}></td><td><input class="cs" data-i="${s.id}" data-k="exam" type="number" min="0" max="60" value="${x.exam??''}" oninput="rowTot(this)" style="width:80px" ${d}></td><td id="t_${s.id}"></td><td id="g_${s.id}"></td><td>${x.published?'<span class="green">Validated</span>':x.studentId?'Pending':''}</td></tr>`}).join('')||'<tr><td>No students in this class.</td></tr>'}</table><button onclick="saveComp()">Save scores</button> <button class="g" onclick="rank()">Class ranking</button><p><small>Validated scores are locked. Management can correct them under Validate & Correct Results.</small></p></div><div id="rk"></div>`;
  st.forEach(s=>rowTot(document.querySelector(`.cs[data-i="${s.id}"]`)))}
 function rowTot(e){if(!e)return;const i=e.dataset.i,q=k=>document.querySelector(`.cs[data-i="${i}"][data-k="${k}"]`).value,a=q('test'),b=q('exam'),T=$('#t_'+i),Gd=$('#g_'+i);if(a===''&&b===''){T.textContent=Gd.textContent='';return}const n=(+a||0)+(+b||0);T.textContent=n;Gd.textContent=grade(n)}
 async function saveComp(){
  const c=v('cp_c'),t=v('cp_t'),sj=v('cp_s'),b=db.batch(),ids=new Set();
  document.querySelectorAll('.cs').forEach(e=>ids.add(e.dataset.i));
  let n=0;
- for(const i of ids){const q=k=>document.querySelector(`.cs[data-i="${i}"][data-k="${k}"]`),a=q('test').value,x=q('exam').value;if(a===''&&x==='')continue;
+ for(const i of ids){const q=k=>document.querySelector(`.cs[data-i="${i}"][data-k="${k}"]`),a=q('test').value,x=q('exam').value;if(q('test').disabled||(a===''&&x===''))continue;
   if(+a<0||+a>40||+x<0||+x>60)return alert('Test must be 0-40 and exam 0-60.');
-  b.set(db.doc('results/'+subId(i,sj+'_'+t)),{studentId:i,studentName:q('test').dataset.n,class:c,subject:sj,trimester:t,test:+a||0,exam:+x||0,published:false,by:me.uid,byName:me.name,at:Date.now()});n++}
+  const ses=q('test').dataset.s||'',did=q('test').dataset.d||subId(i,sj+'_'+t+(ses?'_'+ses:''));
+  b.set(db.doc('results/'+did),{studentId:i,studentName:q('test').dataset.n,class:c,session:ses,subject:sj,trimester:t,test:+a||0,exam:+x||0,published:false,by:me.uid,byName:me.name,at:Date.now()});n++}
  if(!n)return alert('Nothing to save.');
- await b.commit();alert(n+' score(s) saved. Management can validate them under "Validate Results".');loadComp()}
+ try{await b.commit();alert(n+' score(s) saved. Management can validate them under "Validate & Correct Results".');loadComp()}catch(e){alert('Could not save: '+(e.code||e.message))}}
 async function rank(){
- const r=await list('results',['class','==',v('cp_c')],['trimester','==',v('cp_t')]),m={};
- r.forEach(x=>{const o=m[x.studentId]||(m[x.studentId]={n:x.studentName,t:0,c:0});o.t+=x.test+x.exam;o.c++});
+ const[r,st]=await Promise.all([list('results',['class','==',v('cp_c')],['trimester','==',v('cp_t')]),list('students',['class','==',v('cp_c')])]),act={},m={};
+ st.filter(x=>x.status!='Graduated').forEach(x=>act[x.id]=x.session||'');
+ r.filter(x=>x.studentId in act&&(!x.session||x.session==act[x.studentId])).forEach(x=>{const o=m[x.studentId]||(m[x.studentId]={n:x.studentName,t:0,c:0});o.t+=x.test+x.exam;o.c++});
  const a=Object.values(m).sort((x,y)=>y.t-x.t);
  $('#rk').innerHTML=`<div class="card"><h3>Class ranking</h3><table><tr><th>Pos</th><th>Student</th><th>Subjects</th><th>Total</th><th>Average</th><th>Grade</th></tr>${a.map((o,i)=>`<tr><td>${i+1}</td><td>${esc(o.n)}</td><td>${o.c}</td><td>${o.t}</td><td>${(o.t/o.c).toFixed(1)}</td><td>${grade(o.t/o.c)}</td></tr>`).join('')||'<tr><td>No scores yet.</td></tr>'}</table></div>`}
 
@@ -511,44 +592,74 @@ async function studentDash(id,tab){
  const s=(await db.doc('students/'+id).get()).data()||{},cn=s.class||'';
  const[r,f,c,cl,sj,ev,an,at]=await Promise.all([list('results',['studentId','==',id],['published','==',true]),list('fees',['studentId','==',id]),list('comments',['studentId','==',id]),list('classes',['name','==',cn]),list('subjects',['class','==',cn]),list('events'),list('announcements',['audience','==','students']),list('attendance',['uid','==',id])]);
  sj.sort((a,b)=>a.name.localeCompare(b.name));
- SD={id,s,r,f,c,at,cl:cl[0]||{},sj,ev:ev.sort((a,b)=>a.date>b.date?1:-1).filter(x=>x.date>=today()),an:an.sort((a,b)=>b.at-a.at).slice(0,3)};
+ SD={id,s,r,f,c,at,cl:cl[0]||{},sj,ev:ev.sort((a,b)=>a.date>b.date?1:-1).filter(x=>x.date>=today()),an:an.sort((a,b)=>b.at-a.at)};
  const T=[['ov','Overview'],['sb','Subjects'],['rs','Results'],['ac','Academic'],['dc','Documents']],
  paid=f.reduce((a,x)=>a+(+x.amount||0),0),due=+s.feeDue||0,fit=paid>=due,pc=due>0?Math.min(100,Math.round(paid/due*100)):100,
- avg=r.length?(r.reduce((a,x)=>a+x.test+x.exam,0)/r.length).toFixed(1):'-',
+ cur=r.filter(x=>!x.session||x.session==s.session),avg=cur.length?(cur.reduce((a,x)=>a+x.test+x.exam,0)/cur.length).toFixed(1):'-',
  att=at.length?Math.round(at.filter(a=>a.status!='Absent').length/at.length*100)+'%':'-',
  li=(a,k)=>a.length?a.join(''):'<p class="mut">None yet.</p>',
  item=(k,t,sub,d)=>`<div class="ev" style="--k:${k}"><div>${esc(t)}${sub?`<small>${esc(sub)}</small>`:''}</div><span class="dt">${esc(d)}</span></div>`,
  nm=((s.firstName||'')+' '+(s.surname||'')).trim();
  set(`<div class="sd">
  <div class="card sdp">${s.photo?`<img class="ph" src="${esc(s.photo)}" alt="">`:`<div class="ph" style="display:grid;place-items:center;font-size:56px;margin:0 auto">${esc((s.firstName||'?')[0])}</div>`}
- <h2>${esc(nm)}</h2><p class="mut">Student ID: ${esc(s.regNo||'-')}</p><p class="mut">${esc(cn||'-')} · ${esc(s.campus||'-')}</p>
+ <h2>${esc(nm)}</h2><p class="mut">Student ID: ${esc(s.regNo||'-')}</p><p class="mut">${esc(cn||'-')} · ${esc(s.campus||'-')}</p>${s.status=='Graduated'?`<p style="color:var(--gold);font-weight:700">Graduated ${esc(s.graduatedOn||'')}</p>`:''}
  <div class="trio"><div><span>Average</span><b>${avg}</b></div><div><span>Attendance</span><b>${att}</b></div><div><span>Fees</span><b class="${fit?'green':'red'}">${fit?'Fit':'Owing'}</b></div></div>
  <div class="fb"><small>Fees paid ${pc}%</small><div class="bar"><i style="width:${pc}%"></i></div></div></div>
  <div class="card sdm"><div class="sdtabs">${T.map(([k,l])=>`<a data-t="${k}" onclick="sdTab('${k}')">${l}</a>`).join('')}</div><div id="sdt"></div></div>
  <div class="rc"><div class="card"><h4>Upcoming Events</h4>
- <h5>General announcements</h5>${li(SD.an.map(x=>item('var(--pri)',x.title,'',new Date(x.at).toLocaleDateString())))}
+ <h5>General announcements</h5><div class="annbox">${li(SD.an.map(x=>`<div class="ev" style="--k:var(--pri)"><div>${esc(x.title)}<small>${esc((x.body||'').slice(0,90))}${(x.body||'').length>90?'…':''}</small></div><span class="dt">${new Date(x.at).toLocaleDateString()}${MG.includes(me.role)?` <a style="cursor:pointer;color:var(--bad);font-weight:700" onclick="delNews('${x.id}','sd')" title="Remove announcement">✕</a>`:''}</span></div>`))}</div>
  <h5>Tests & exams</h5>${li(SD.ev.filter(x=>x.type=='Test/Exam').map(x=>item('var(--acc)',x.title,'',x.date)))}
  <h5>Holidays</h5>${li(SD.ev.filter(x=>x.type=='Holiday').map(x=>item('var(--gold)',x.title,'',x.date)))}</div>
  <div class="card"><h4>My Subjects (${sj.length})</h4>${sj.slice(0,6).map(x=>`<div class="sj"><span>${esc(x.name)}</span></div>`).join('')||'<p class="mut">No subjects set for this class yet.</p>'}${sj.length>6?`<p class="mut"><a style="cursor:pointer;color:var(--pri)" onclick="sdTab('sb')">See all ${sj.length}</a></p>`:''}</div></div></div>`);
  sdTab(tab||'ov')}
 const ring=(p,t,sub)=>`<svg width="96" height="96" viewBox="0 0 96 96"><circle cx="48" cy="48" r="40" fill="none" stroke="var(--bd)" stroke-width="8"/><circle cx="48" cy="48" r="40" fill="none" stroke="var(--gold)" stroke-width="8" stroke-linecap="round" stroke-dasharray="${(p*2.513).toFixed(1)} 251.3" transform="rotate(-90 48 48)"/><text x="48" y="51" text-anchor="middle" font-size="18" font-weight="700" fill="var(--tx)">${t}</text><text x="48" y="66" text-anchor="middle" font-size="9" fill="var(--mut)">${sub}</text></svg>`;
 function sdTab(k){
+ SD.tab=k;
  const{id,s,r,f,c,at,cl,sj}=SD,paid=f.reduce((a,x)=>a+(+x.amount||0),0),due=+s.feeDue||0,fit=paid>=due,
  here=at.filter(a=>a.status!='Absent').length,ap=at.length?Math.round(here/at.length*100):0;
  document.querySelectorAll('[data-t]').forEach(b=>b.classList.toggle('on',b.dataset.t==k));
  const acSum=`<div class="card"><h4>Academic Summary</h4><div class="sum"><p>Current Class: <b>${esc(s.class||'-')}</b><br>Academic Year: <b>${esc(s.session||'-')}</b><br>Class Teacher: <b>${esc(cl.teacherName||'Not assigned')}</b><br>Class Teacher's Contact: <b>${esc(cl.teacherPhone||'-')}</b></p>${ring(ap,at.length?ap+'%':'-','Attendance')}</div></div>`;
+ const slips=[];[...new Set(r.map(x=>x.session||''))].sort().reverse().forEach(se=>TRIS.forEach(t=>{if(r.some(x=>(x.session||'')==se&&x.trimester==t))slips.push({se,t})}));SD.slips=slips;
  const H={
- ov:`<div class="card"><h4>About</h4><p>${esc(s.about||'No story added yet.')}</p>${MG.includes(me.role)||me.uid==id?`<textarea id="ab" rows="3" placeholder="Write a short story about the student and their ambitions">${esc(s.about||'')}</textarea><button onclick="saveAbout()">Save</button>`:''}</div>
+ ov:`<div class="card"><h4>About</h4><p class="just">${esc(s.about||'No story added yet.')}</p>${MG.includes(me.role)?`<textarea id="ab" rows="3" placeholder="Write a short story about the student and their ambitions">${esc(s.about||'')}</textarea><button onclick="saveAbout()">Save</button>`:''}</div>
  ${acSum}
  <div class="card"><h4>Contact Info</h4><p style="line-height:1.9;margin:0">School E-mail: <b>${esc(SCHOOL.email)}</b><br>Phone: <b>${esc(SCHOOL.phone)}</b><br>Location: <b>${esc(SCHOOL.loc[s.campus]||s.campus||'-')}</b></p></div>`,
- sb:`<div class="card"><h4>Subjects - ${esc(s.class||'')}</h4><table><tr><th>Subject</th><th>Latest total</th><th>Grade</th></tr>${sj.map(x=>{const l=r.filter(y=>y.subject==x.name).sort((a,b)=>TRIS.indexOf(b.trimester)-TRIS.indexOf(a.trimester))[0],n=l?l.test+l.exam:null;return`<tr><td>${esc(x.name)}</td><td>${n==null?'-':n}</td><td>${n==null?'-':grade(n)}</td></tr>`}).join('')||'<tr><td>No subjects set for this class yet.</td></tr>'}</table></div>`,
- rs:TRIS.map(t=>{const l=r.filter(x=>x.trimester==t);if(!l.length)return'';const tot=l.reduce((a,x)=>a+x.test+x.exam,0);return`<div class="card"><h4>${t} <small>(Total ${tot} · Avg ${(tot/l.length).toFixed(1)})</small></h4><table><tr><th>Subject</th><th>Test</th><th>Exam</th><th>Total</th><th>Grade</th></tr>${l.map(x=>{const n=x.test+x.exam;return`<tr><td>${esc(x.subject)}</td><td>${x.test}</td><td>${x.exam}</td><td class="${n<50?'red':'green'}">${n}</td><td>${grade(n)}</td></tr>`}).join('')}</table></div>`}).join('')||'<div class="card">Results not yet released.</div>',
+ sb:`<div class="card"><h4>Subjects - ${esc(s.class||'')}</h4><table><tr><th>Subject</th><th>Latest total</th><th>Grade</th></tr>${sj.map(x=>{const l=r.filter(y=>y.subject==x.name&&(!y.session||y.session==s.session)).sort((a,b)=>TRIS.indexOf(b.trimester)-TRIS.indexOf(a.trimester))[0],n=l?l.test+l.exam:null;return`<tr><td>${esc(x.name)}</td><td>${n==null?'-':n}</td><td>${n==null?'-':grade(n)}</td></tr>`}).join('')||'<tr><td>No subjects set for this class yet.</td></tr>'}</table></div>`,
+ rs:(()=>{const ses=[...new Set(r.map(x=>x.session||'Earlier results'))].sort().reverse(),h=ses.map(se=>TRIS.map(t=>{const l=r.filter(x=>(x.session||'Earlier results')==se&&x.trimester==t);if(!l.length)return'';const tot=l.reduce((a,x)=>a+x.test+x.exam,0);return`<div class="card"><h4>${esc(se)} · ${t} <small>(Total ${tot} · Avg ${(tot/l.length).toFixed(1)})</small></h4><table><tr><th>Subject</th><th>Test</th><th>Exam</th><th>Total</th><th>Grade</th></tr>${l.map(x=>{const n=x.test+x.exam;return`<tr><td>${esc(x.subject)}</td><td>${x.test}</td><td>${x.exam}</td><td class="${n<50?'red':'green'}">${n}</td><td>${grade(n)}</td></tr>`}).join('')}</table></div>`}).join('')).join('');return h?`<p class="mut">Scroll down to see other trimesters.</p><div class="rscroll">${h}</div>`:'<div class="card">Results not yet released.</div>'})(),
  ac:acSum+`<div class="card"><h4>Attendance</h4><p>Days attended <b>${here}/${at.length}</b></p></div><div class="card"><h4>Fees</h4><p>Paid <b>${money(paid)}</b> · Balance <b>${money(Math.max(due-paid,0))}</b> · Status <b class="${fit?'green':'red'}">${fit?'Fit':'Owing'}</b></p></div><div class="card"><h4>Comments</h4>${c.map(x=>`<p><b>${esc(x.byName)}</b>: ${esc(x.text)}</p>`).join('')}<input id="cm" placeholder="Write a comment"><button onclick="postComment('${id}')">Post</button></div>`,
- dc:`<div class="card"><h4>Payment Receipts</h4><table>${f.map(x=>`<tr><td>${new Date(x.at).toLocaleDateString()}</td><td>${esc(x.type)}</td><td>${money(x.amount)}</td><td><button class="g" onclick="receipt('${x.id}')">Print</button></td></tr>`).join('')||'<tr><td>No receipts.</td></tr>'}</table></div><div class="card"><h4>Result Slips</h4>${TRIS.filter(t=>r.some(x=>x.trimester==t)).map(t=>`<button class="g" onclick="slip('${t}')">${t}</button> `).join('')||'No released results yet.'}</div>`};
+ dc:`<div class="card"><h4>Payment Receipts</h4><table>${f.map(x=>`<tr><td>${new Date(x.at).toLocaleDateString()}</td><td>${esc(x.type)}</td><td>${money(x.amount)}</td><td><button class="g" onclick="receipt('${x.id}')">Print</button></td></tr>`).join('')||'<tr><td>No receipts.</td></tr>'}</table></div><div class="card"><h4>Result Slips</h4>${slips.map((x,i)=>`<button class="g" onclick="slip(${i})">${esc(x.se||'Results')} · ${x.t}</button> `).join('')||'No released results yet.'}</div>`};
  $('#sdt').innerHTML=H[k]}
-async function saveAbout(){const t=v('ab').trim();await db.doc('students/'+SD.id).update({about:t});SD.s.about=t;sdTab('ov')}
-function slip(t){const l=SD.r.filter(x=>x.trimester==t),s=SD.s,w=window.open('');if(!w)return alert('Allow pop-ups.');
- w.document.write(`<body style="font-family:Arial;padding:30px;max-width:700px"><img src="${esc(new URL(LOGO_URL,location.href).href)}" width=80><h2>Result Slip - ${esc(t)}</h2><p>${esc(s.surname)} ${esc(s.firstName)} · ${esc(s.regNo)} · ${esc(s.class)} · ${esc(s.session||'')}</p><table border=1 cellpadding=6 style="border-collapse:collapse;width:100%"><tr><th>Subject</th><th>Test</th><th>Exam</th><th>Total</th><th>Grade</th></tr>${l.map(x=>`<tr><td>${esc(x.subject)}</td><td>${x.test}</td><td>${x.exam}</td><td>${x.test+x.exam}</td><td>${grade(x.test+x.exam)}</td></tr>`).join('')}</table><script>print()<\/script>`)}
+async function saveAbout(){if(!MG.includes(me.role))return;const t=v('ab').trim();await db.doc('students/'+SD.id).update({about:t});SD.s.about=t;sdTab('ov')}
+function slip(i){
+ const{se,t}=SD.slips[i],l=SD.r.filter(x=>(x.session||'')==se&&x.trimester==t).sort((a,b)=>a.subject.localeCompare(b.subject)),s=SD.s,cl=SD.cl||{},w=window.open('');
+ if(!w)return alert('Allow pop-ups.');
+ const GC={A:'#12a150',B:'#1c3f94',C:'#f08a00',D:'#c76a00',F:'#e5313d'},tot=l.reduce((a,x)=>a+x.test+x.exam,0),av=l.length?tot/l.length:0,logo=new URL(LOGO_URL,location.href).href;
+ const rows=l.map(x=>{const n=x.test+x.exam,g=grade(n);return`<tr><td>${esc(x.subject)}</td><td>${x.test}</td><td>${x.exam}</td><td><b>${n}</b></td><td><span class="gd" style="background:${GC[g]}">${g}</span></td><td>${REM[g]}</td></tr>`}).join('');
+ w.document.write(`<!DOCTYPE html><html><head><title>Result Slip</title><style>
+@page{size:A4;margin:10mm}*{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+body{font-family:Arial,sans-serif;margin:0;padding:16px;color:#10213f;background:#fff}
+.sheet{max-width:780px;margin:auto;border:3px solid #1c3f94;border-radius:16px;overflow:hidden}
+.hd{background:linear-gradient(120deg,#10213f,#1c3f94 60%,#e0147a);color:#fff;padding:16px 22px;display:flex;align-items:center;gap:16px}
+.hd img{width:84px;height:84px;object-fit:contain;background:#fff;border-radius:50%;padding:4px}
+.hd h1{margin:0;font-size:21px}.hd p{margin:4px 0 0;color:#f5b700;font-weight:700}
+.bar{height:6px;background:linear-gradient(90deg,#f5b700,#e0147a,#1c3f94)}
+.id{display:flex;gap:18px;padding:16px 22px;align-items:center;background:#f3f6fb}
+.id img{width:120px;height:120px;border-radius:50%;object-fit:cover;border:4px solid #f5b700;box-shadow:0 0 0 4px #1c3f9422}
+.id table{border-collapse:collapse}.id td{padding:3px 14px 3px 0;font-size:14px}.id td:first-child{color:#6b7a96}
+h2.t{margin:0;padding:10px 22px;background:#f5b700;color:#10213f;font-size:16px;text-align:center}
+table.r{width:calc(100% - 44px);margin:14px 22px;border-collapse:collapse;font-size:14px}
+.r th{background:#1c3f94;color:#fff;padding:8px;text-align:left}.r td{padding:8px;border-bottom:1px solid #dfe6f3}.r tr:nth-child(even) td{background:#f3f6fb}
+.gd{color:#fff;padding:2px 10px;border-radius:12px;font-weight:700}
+.sm{display:flex;gap:10px;padding:0 22px 8px}.sm div{flex:1;border-radius:12px;padding:10px;color:#fff;text-align:center;font-size:12px}.sm b{display:block;font-size:20px}
+.sg{display:flex;gap:24px;padding:26px 22px 18px}.sg div{flex:1;border-top:1px solid #10213f;padding-top:5px;font-size:12px;text-align:center}
+</style></head><body><div class="sheet">
+<div class="hd"><img src="${esc(logo)}" alt=""><div><h1>DIVINE SEEDS INTERNATIONAL SCHOOLS, EKET</h1><p>Training Godly Future Champions</p></div></div><div class="bar"></div>
+<div class="id">${s.photo?`<img src="${esc(s.photo)}" alt="">`:''}<table><tr><td>Name</td><td><b>${esc(s.surname)} ${esc(s.firstName)}</b></td></tr><tr><td>Student ID</td><td>${esc(s.regNo||'-')}</td></tr><tr><td>Class</td><td>${esc(s.class||'-')}</td></tr><tr><td>Session</td><td>${esc(se||s.session||'-')}</td></tr><tr><td>Campus</td><td>${esc(s.campus||'-')}</td></tr><tr><td>Class teacher</td><td>${esc(cl.teacherName||'-')}</td></tr></table></div>
+<h2 class="t">RESULT SLIP · ${esc(t.toUpperCase())}</h2>
+<table class="r"><tr><th>Subject</th><th>Test /40</th><th>Exam /60</th><th>Total /100</th><th>Grade</th><th>Remark</th></tr>${rows}</table>
+<div class="sm"><div style="background:#1c3f94">Total score<b>${tot}</b></div><div style="background:#e0147a">Average<b>${av.toFixed(1)}</b></div><div style="background:${GC[grade(av)]}">Overall grade<b>${grade(av)}</b></div><div style="background:#f5b700;color:#10213f">Subjects<b>${l.length}</b></div></div>
+<div class="sg"><div>Class Teacher</div><div>Principal</div><div>Parent / Guardian</div></div></div>
+<script>onload=()=>setTimeout(()=>print(),500)<\/script></body></html>`)}
 async function receipt(id){
  const f=(await db.doc('fees/'+id).get()).data(),s=(await db.doc('students/'+f.studentId).get()).data()||{};
  const w=window.open('');if(!w)return alert('Allow pop-ups to print the receipt.');
