@@ -181,7 +181,7 @@ async mgmt(){
  const[s,t,n]=await Promise.all([list('students'),list('staff'),list('attendance',['date','==',today()])]);
  set(`<div class="grid"><div class="card stat"><span>Students</span><b>${s.length}</b></div><div class="card stat"><span>Staff</span><b>${t.length}</b></div><div class="card stat"><span>Staff present today</span><b class="green">${n.filter(x=>x.status=='Present').length}</b></div></div>
  <div class="card"><h3>Students</h3><table><tr><th>ID</th><th>Name</th><th>Class</th><th>Campus</th><th></th></tr>${s.map(x=>`<tr><td>${esc(x.regNo)}</td><td>${esc(x.surname)} ${esc(x.firstName)}</td><td>${esc(x.class)}</td><td>${esc(x.campus)}</td><td><button class="g" onclick="studentDash('${x.id}')">Open</button></td></tr>`).join('')}</table></div>`)},
-reg(){photo='';FP={t:[]};set(`<div class="card"><h3>Student Registration</h3><div class="grid">${F([['surname','Surname'],['firstName','First name'],['middleName','Middle name'],['gender','Gender','Male,Female'],['dob','Date of birth','date'],['pob','Place of birth'],['nationality','Nationality'],['state','State of origin'],['lga','LGA'],['address','Residential address'],['phone','Phone'],['email','Student email (optional)','email'],['indigene','Status','Indigene,Non-Indigene'],['level','Section','Creche,Nursery,Primary,Junior High School,Senior High School'],['class','Class',CLASSES.join(',')],['session','Session (2026/2027)'],['campus','Campus','Ediam,Ikot Oso'],['boarding','Boarding?','Day,Boarding'],['father','Father name'],['fatherPhone','Father phone'],['mother','Mother name'],['motherPhone','Mother phone'],['guardianEmail','Parent email (REQUIRED - used for password setup and recovery)','email'],['emName','Emergency contact'],['emPhone','Emergency phone'],['blood','Blood group'],['genotype','Genotype'],['allergies','Allergies'],['about','About the student (short story and ambitions)'],['feeDue','Total fees due (₦)','number']])}</div>
+reg(){photo='';FP={t:[]};set(`<div class="card"><h3>Student Registration</h3><div class="grid">${F([['surname','Surname'],['firstName','First name'],['middleName','Middle name'],['gender','Gender','Male,Female'],['dob','Date of birth','date'],['pob','Place of birth'],['nationality','Nationality'],['state','State of origin'],['lga','LGA'],['address','Residential address'],['phone','Phone'],['email','Student email (optional)','email'],['indigene','Status','Indigene,Non-Indigene'],['level','Section','Creche,Nursery,Primary,Junior High School,Senior High School'],['class','Class',CLASSES.join(',')],['session','Session (2026/2027)'],['campus','Campus','Ediam,Ikot Oso'],['boarding','Boarding?','Day,Boarding'],['father','Father name'],['fatherPhone','Father phone'],['mother','Mother name'],['motherPhone','Mother phone'],['guardianEmail','Parent email (REQUIRED - the same email can be used for many children)','email'],['emName','Emergency contact'],['emPhone','Emergency phone'],['blood','Blood group'],['genotype','Genotype'],['allergies','Allergies'],['about','About the student (short story and ambitions)'],['feeDue','Total fees due (₦)','number']])}</div>
  <p><b>Biometric ID</b> <small>(auto-numbered. Enrol this number on the fingerprint scanner so attendance can be taken)</small></p><input id="f_bioId" type="number">${FPUI}
  <p>Passport photo:</p><input type="file" accept="image/*" capture="user" onchange="snap(this)"><img id="pv" class="pic"><br><button onclick="regStudent()">Register & Create Account</button><p id="rmsg"></p></div>`)},
 async bread(){
@@ -265,13 +265,22 @@ async function sendMyReset(){
  try{await auth.sendPasswordResetEmail(e);m.className='green';m.textContent='Reset link sent to '+e+'.'}catch(x){m.className='red';m.textContent='Could not send: '+x.code}}
 async function mkUser(username,pw,data,realEmail){
  username=username.toLowerCase();
- const email=(realEmail||'').trim().toLowerCase()||(username+FAKE);
+ const real=(realEmail||'').trim().toLowerCase();
  const sec=firebase.apps.find(a=>a.name=='sec')||firebase.initializeApp(CFG,'sec');
- const c=await sec.auth().createUserWithEmailAndPassword(email,pw);
- if(realEmail){try{await sec.auth().sendPasswordResetEmail(email)}catch(e){console.warn(e.code)}}
+ let email=real||(username+FAKE),c;
+ try{c=await sec.auth().createUserWithEmailAndPassword(email,pw)}
+ catch(e){
+  // Firebase allows one account per email. If this parent email is already used, create a
+  // unique alias (name+username@domain) that still delivers to the same inbox.
+  if(e.code=='auth/email-already-in-use'&&real.includes('@')){
+   const i=real.lastIndexOf('@');email=real.slice(0,i).split('+')[0]+'+'+username+real.slice(i);
+   c=await sec.auth().createUserWithEmailAndPassword(email,pw);
+  }else throw e}
+ if(real){try{await sec.auth().sendPasswordResetEmail(email)}catch(e){console.warn(e.code)}}
  await sec.auth().signOut();
  await db.doc('users/'+c.user.uid).set({...data,email,username});
  await db.doc('usernames/'+username).set({email});
+ mkUser.last=email;
  return c.user.uid}
 async function regStudent(){
  const g=G(),m=$('#rmsg');
@@ -283,7 +292,7 @@ async function regStudent(){
   const uid=await mkUser(un,'Seeds'+Math.floor(100000+Math.random()*900000),{role:'student',name:g.firstName+' '+g.surname},g.guardianEmail);
   await db.doc('students/'+uid).set({...g,feeDue:+g.feeDue||0,regNo:reg,username:un,photo,fpEnrolled:FP.t.filter(Boolean).length>0,status:'Active',registered:Date.now()});await fpSave(uid,'student');
   await notify('New student registered: '+g.firstName+' '+g.surname);
-  m.innerHTML=`Done. Username: <b>${un}</b>. A link to set the password was emailed to ${esc(g.guardianEmail)}.`;
+  m.innerHTML=`Done. Username: <b>${un}</b>. A link to set the password was emailed to ${esc(g.guardianEmail)}.${mkUser.last!=g.guardianEmail.trim().toLowerCase()?' <br><small>This parent email already has other children, so this child\'s account uses the alias <b>'+esc(mkUser.last)+'</b>. It delivers to the same inbox.</small>':''}`;
  }catch(e){console.error(e);m.textContent='Could not register: '+(e.code||e.message)}}
 async function addStaff(){
  const g=G(),m=$('#rmsg');
