@@ -205,7 +205,7 @@ async stat(){
  set(`<div class="card"><h3>Stationery</h3><table>${s.map(x=>`<tr><td>${esc(x.item)}</td><td>${money(x.price)}</td></tr>`).join('')}</table><input id="si" placeholder="Item"><input id="sp" type="number" placeholder="Price"><button onclick="addStat()">Add</button></div>`)},
 reset(){
  if(!TOP.includes(me.role))return;
- set(`<div class="card"><h3 class="red">Reset (Proprietor/Admin only)</h3><select id="rc"><option>announcements</option><option>results</option><option>attendance</option><option>fees</option><option>bread_days</option><option>notifications</option><option>events</option></select><button class="s" onclick="doReset()">Reset selected section</button></div>`)},
+ set(`<div class="card"><h3 class="red">Reset (Proprietor/Admin only)</h3><p><small>Deleted records cannot be recovered. Student, staff and login accounts are never deleted here.</small></p><select id="rc"><option value="all">ALL (everything below)</option>${RESETS.map(x=>`<option>${x}</option>`).join('')}</select><button class="s" onclick="doReset()">Reset selected section</button><p id="rst_msg"></p></div>`)},
 async roll(){
  const tc=me.role==='teacher';
  set(`<div class="card"><h3>Take Attendance</h3>${tc?'':'<select id="r_k" onchange="loadRoll()"><option value="student">Students</option><option value="staff">Staff</option></select>'}
@@ -332,11 +332,25 @@ async function saveBread(open){
  if(open+p-s-x<0)return alert('Negative stock not allowed');
  await db.collection('bread_days').doc(v('bd')).set({date:v('bd'),produced:p,sold:s,damaged:x});go('bread')}
 async function addStat(){await add('stationery',{item:v('si'),price:+v('sp')||0});go('stat')}
+const RESETS=['announcements','results','attendance','fees','bread_days','notifications','events','comments','stationery','classes','subjects','biometrics'];
 async function doReset(){
- const c=v('rc');if(!confirm('Delete ALL records in '+c+'?'))return;
- const docs=(await db.collection(c).get()).docs;
- for(let i=0;i<docs.length;i+=400){const b=db.batch();docs.slice(i,i+400).forEach(d=>b.delete(d.ref));await b.commit()}
- alert('Reset done')}
+ const c=v('rc'),cols=c=='all'?RESETS:[c],m=$('#rst_msg');
+ if(c=='all'){if(prompt('This deletes ALL of these records:\n'+RESETS.join(', ')+'\n\nStudent, staff and login accounts are kept.\nType RESET to confirm.')!=='RESET')return}
+ else if(!confirm('Delete ALL records in '+c+'?'))return;
+ m.className='';m.textContent='Resetting...';
+ try{
+  for(const col of cols){
+   const docs=(await db.collection(col).get()).docs;
+   for(let i=0;i<docs.length;i+=400){const b=db.batch();docs.slice(i,i+400).forEach(d=>b.delete(d.ref));await b.commit()}
+  }
+  if(cols.includes('biometrics')){
+   for(const col of ['students','staff']){
+    const docs=(await db.collection(col).where('fpEnrolled','==',true).get()).docs;
+    for(let i=0;i<docs.length;i+=400){const b=db.batch();docs.slice(i,i+400).forEach(d=>b.update(d.ref,{fpEnrolled:false}));await b.commit()}
+   }
+  }
+  m.className='green';m.textContent='Reset done: '+cols.join(', ')+'.';
+ }catch(e){m.className='red';m.textContent='Could not finish: '+(e.code||e.message)+'. Check that your Firestore rules allow admins to delete these collections.'}}
 // ---- Futronic scanner via the local "Biometric Web API" service (webapi.exe on http://localhost:8080) ----
 const FPURL='http://localhost:8080';let FP={t:[]};
 const FPUI=`<p><b>Fingerprint</b> <small>(optional now; can be enrolled later in Take Attendance. Get written consent from the parent or staff member first.)</small></p><button type="button" onclick="fpCapture(0)">👆 Scan finger 1</button> <button type="button" onclick="fpCapture(1)">👆 Scan finger 2</button><br><img id="fp_img0" style="display:none;width:90px;margin:6px"><img id="fp_img1" style="display:none;width:90px;margin:6px"><p id="fp_msg"></p>`;
