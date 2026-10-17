@@ -1,5 +1,6 @@
 <!DOCTYPE html><html><head><base target="_top"><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="preconnect" href="https://identitytoolkit.googleapis.com"><link rel="preconnect" href="https://firestore.googleapis.com"><link rel="preconnect" href="https://securetoken.googleapis.com">
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
@@ -34,7 +35,7 @@ table{width:100%;border-collapse:collapse;font-size:14px;display:block;overflow-
 <div id="loginBox"><div class="lbox"><img src="" id="lg" alt="Divine Seeds International Schools logo" onerror="this.style.display='none'"><h2>DIVINE SEEDS INTERNATIONAL EKET</h2><small>Training Godly Future Champions</small><br><br>
 <input id="u" placeholder="Username / ID or email" autocomplete="username">
 <div class="pw"><input id="p" type="password" placeholder="Password" autocomplete="current-password" onkeydown="if(event.key==='Enter')login()"><span id="eye" onclick="togglePw()" title="Show / hide password">👁️</span></div>
-<button onclick="login()" style="width:100%">Sign in</button>
+<button id="lb" onclick="login()" style="width:100%">Sign in</button>
 <button class="g" onclick="bio()" style="width:100%">Sign in with Fingerprint</button>
 <a class="flink" onclick="forgot()">Forgot password?</a>
 <p id="info" class="green"></p><p id="err" class="red"></p></div></div>
@@ -85,7 +86,7 @@ async function enter(user){
     if(!d.exists){err.textContent='Signed in, but no role profile was found. In Firestore, create users/'+user.uid+' with role and name fields.';await auth.signOut();return}
     me={uid:user.uid,...d.data()};
     if(!me.role){err.textContent='Your Firestore users profile is missing the role field.';await auth.signOut();return}
-    loginBox.style.display='none';appBox.style.display='grid';
+    lbReset();loginBox.style.display='none';appBox.style.display='grid';
     document.body.className=me.role==='student'?'student':'';
     $('#bell').style.display=MG.includes(me.role)?'inline':'none';
     $('#lockBtn').style.display=bioGet(user.uid)?'inline':'none';
@@ -99,18 +100,22 @@ async function enter(user){
 async function resolveEmail(x){
   x=x.trim().toLowerCase();
   if(x.includes('@'))return x;
-  try{const d=await db.doc('usernames/'+x).get();if(d.exists&&d.data().email)return d.data().email}catch(e){console.warn('username lookup failed',e.code)}
+  try{const c=localStorage.getItem('dsu_'+x);if(c)return c}catch(e){}
+  try{const d=await db.doc('usernames/'+x).get();if(d.exists&&d.data().email){try{localStorage.setItem('dsu_'+x,d.data().email)}catch(e){}return d.data().email}}catch(e){console.warn('username lookup failed',e.code)}
   return x+FAKE; // older accounts
 }
+function lbReset(){const b=$('#lb');b.disabled=false;b.textContent='Sign in'}
 async function login(){
   err.textContent='';info.textContent='';
   const pw=v('p');
   if(!v('u').trim()||!pw){err.textContent='Enter your username and password.';return}
+  const lb=$('#lb');lb.disabled=true;lb.textContent='Signing in...';
   await ready;
   const email=await resolveEmail(v('u'));
   unlocked=true;
   try{await auth.signInWithEmailAndPassword(email,pw)}catch(e){
-    unlocked=false;
+    unlocked=false;lbReset();
+    if(e.code=='auth/user-not-found'||e.code=='auth/invalid-email'){try{localStorage.removeItem('dsu_'+v('u').trim().toLowerCase())}catch(_){}}
     console.error('Sign-in failed:',e.code,e.message);
     const M={'auth/invalid-email':'The username/email format is invalid.','auth/invalid-credential':'The username or password is incorrect. Use "Forgot password?" to reset it.','auth/wrong-password':'The password is incorrect. Use "Forgot password?" to reset it.','auth/user-not-found':'No account matches this username.','auth/too-many-requests':'Too many attempts. Wait a while, or reset your password.','auth/operation-not-allowed':'Email/password sign-in is disabled in Firebase Authentication.','auth/network-request-failed':'Network error. Check your internet connection.','auth/unauthorized-domain':'This site domain is not authorized in Firebase Authentication → Settings → Authorized domains.'};
     err.textContent=M[e.code]||('Login failed: '+(e.code||'unknown error'));
@@ -152,7 +157,7 @@ const notify=m=>add('notifications',{msg:m,to:MG});
 const set=h=>mainEl.innerHTML=h;
 const opts=a=>a.map(x=>`<option>${esc(x)}</option>`).join('');
 function go(k){document.querySelectorAll('aside a').forEach(a=>a.classList.toggle('on',a.dataset.k==k));side.classList.remove('open');
- const a=document.querySelector(`aside a[data-k="${k}"]`);ttl.textContent=a?a.textContent:'';Promise.resolve(V[k]()).then(fillBio)}
+ const a=document.querySelector(`aside a[data-k="${k}"]`);ttl.textContent=a?a.textContent:'';mainEl.innerHTML='<div class="card">Loading...</div>';Promise.resolve(V[k]()).then(fillBio)}
 function F(a){return a.map(([k,l,o])=>o&&o!='date'&&o!='number'&&o!='email'?`<select id="f_${k}"><option value="">${l}</option>${o.split(',').map(x=>`<option>${x}</option>`).join('')}</select>`:`<input id="f_${k}" type="${o||'text'}" placeholder="${l}">`).join('')}
 const G=()=>Object.fromEntries([...document.querySelectorAll('[id^=f_]')].map(e=>[e.id.slice(2),e.value.trim()]));
 function snap(i){const f=i.files[0];if(!f)return;const im=new Image();im.onload=()=>{const c=document.createElement('canvas');c.width=c.height=240;const x=c.getContext('2d');x.filter='brightness(1.08) contrast(1.05) saturate(1.1)';const m=Math.min(im.width,im.height);x.drawImage(im,(im.width-m)/2,(im.height-m)/2,m,m,0,0,240,240);photo=c.toDataURL('image/jpeg',.8);$('#pv').src=photo};im.src=URL.createObjectURL(f)}
