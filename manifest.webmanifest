@@ -1,0 +1,12 @@
+{
+  "name": "Divine Seeds International Schools Portal",
+  "short_name": "Divine Seeds",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#10213f",
+  "theme_color": "#10213f",
+  "icons": [
+    { "src": "logo.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}
