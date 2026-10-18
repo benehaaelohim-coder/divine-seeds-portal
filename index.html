@@ -681,7 +681,7 @@ async function receipt(id){
  const w=window.open('');if(!w)return alert('Allow pop-ups to print the receipt.');
  w.document.write(`<body style="font-family:Arial;padding:30px;max-width:600px"><img src="${esc(new URL(LOGO_URL,location.href).href)}" width=80>${s.photo?`<img src="${esc(s.photo)}" width=90 style="float:right">`:''}<h2>Payment Receipt</h2><p><b>No:</b> ${esc(f.receiptNo||'-')}<br><b>Date:</b> ${new Date(f.at).toLocaleString()}</p><p>${esc(s.surname)} ${esc(s.firstName)} (${esc(s.regNo)})</p><p>${esc(f.type)}${f.trimester?' - '+esc(f.trimester):''}<br><b>Amount: ${money(f.amount)}</b><br>Method: ${esc(f.method||'-')}${f.ref?' · Ref: '+esc(f.ref):''}</p><p>Received by: ${esc(f.byName||'')}</p><script>print()<\/script>`)}
 
- // ===================== FIXES (paste before the last </script>) =====================
+// ===================== FIXES =====================
 // 1. Show errors instead of an endless "Loading..."
 function go(k){document.querySelectorAll('aside a').forEach(a=>a.classList.toggle('on',a.dataset.k==k));side.classList.remove('open');
  const a=document.querySelector(`aside a[data-k="${k}"]`);ttl.textContent=a?a.textContent:'';mainEl.innerHTML='<div class="card">Loading...</div>';window.scrollTo(0,0);
@@ -729,4 +729,97 @@ async function loadRoll(){
   rc.forEach(r=>ROLL.rec[r.uid]=r);drawRoll();
  }catch(e){$('#r_list').textContent='Could not load: '+(e.code||e.message)}}
 // ===================== END FIXES =====================
+
+// ===================== UPDATE 2 =====================
+const NOPAY=['chairman','administrator'],ATT=['proprietor','admin','principal'],DEL=FULL;
+RESETS.push('requisitions');
+
+// Menus: Chairman/Administrator lose both attendance items; everyone in management gets Requisitions
+MENU.chairman=MENU.administrator=MENU.principal.filter(i=>!/^(roll|attend):/.test(i)).concat(['staffreg:Staff & Roles','stat:Stationery']);
+[MENU.principal,MENU.proprietor,MENU.chairman].forEach(m=>{const i=m.findIndex(x=>x.startsWith('fin:'));m.splice(i+1,0,'req:Requisitions')});
+
+// Guards: only Proprietor/Admin/Principal take attendance; teachers take their students only
+{const o=V.roll;V.roll=async function(){if(me.role!=='teacher'&&!ATT.includes(me.role))return set('<div class="card">Only the Proprietor, Admin or Principal can take attendance.</div>');return o()}}
+async function saveAbout(){if(!MG.includes(me.role))return;const t=v('ab').trim();await db.doc('students/'+SD.id).update({about:t});SD.s.about=t;sdTab('ov')}
+async function saveStaffAbout(){
+ if(!ATT.includes(me.role))return;
+ const t=v('sab').trim(),m=$('#sab_m');
+ try{await db.doc('staff/'+me.uid).set({about:t},{merge:true});STF.s.about=t;stTab('ab');const x=$('#sab_m');x.className='green';x.textContent='Saved.'}
+ catch(e){m.className='red';m.textContent='Could not save: '+(e.code||e.message)}}
+
+// Staff dashboard: hide Present/Absent/Fines, Attendance tab, Pay summary (Chairman/Administrator) and Save button (everyone except Proprietor/Admin/Principal)
+{const o=V.dash;V.dash=async function(){await o();if(me.role=='student')return;
+ if(NOPAY.includes(me.role)){const t=document.querySelector('.sdp .trio');if(t)t.remove();const a=document.querySelector('.sdtabs [data-t=at]');if(a)a.remove()}}}
+{const o=stTab;stTab=function(k){
+ if(NOPAY.includes(me.role)&&k=='at')k='ov';
+ o(k);
+ if(NOPAY.includes(me.role))document.querySelectorAll('#sdt .card h4').forEach(h=>{if(h.textContent=='Pay summary')h.closest('.card').remove()});
+ if(!ATT.includes(me.role)){const ta=$('#sab');if(ta){ta.nextElementSibling.remove();const m=$('#sab_m');if(m)m.remove();ta.remove()}}
+}}
+
+// ---------- Delete students / staff ----------
+async function delPerson(kind,id){
+ if(!DEL.includes(me.role))return alert('You are not allowed to delete accounts.');
+ if(id===me.uid)return alert('You cannot delete your own account.');
+ const col=kind=='staff'?'staff':'students',[d,u]=await Promise.all([db.doc(col+'/'+id).get(),db.doc('users/'+id).get()]),x=d.data()||{},ux=u.data()||{},
+ nm=x.name||((x.surname||'')+' '+(x.firstName||'')).trim()||'this person';
+ if(['proprietor','admin'].includes(ux.role)&&!TOP.includes(me.role))return alert('Only the Proprietor or Admin can delete this account.');
+ if(prompt('Delete '+nm+'?\nThis removes the profile, fingerprint and login access. Payment and attendance records are kept.\nType DELETE to confirm.')!=='DELETE')return;
+ try{
+  const b=db.batch(),un=ux.username||x.username||x.staffId;
+  [col+'/'+id,'users/'+id,'biometrics/'+id].forEach(p=>b.delete(db.doc(p)));
+  if(un)b.delete(db.doc('usernames/'+String(un).toLowerCase()));
+  await b.commit();await notify(nm+' ('+kind+') was deleted by '+me.name);go(kind=='staff'?'staffreg':'mgmt');
+ }catch(e){alert('Could not delete: '+(e.code||e.message))}}
+V.mgmt=async function(){
+ const[s,t,n]=await Promise.all([list('students'),list('staff'),list('attendance',['date','==',today()])]),can=DEL.includes(me.role),att=ATT.includes(me.role);
+ set(`<div class="grid"><div class="card stat"><span>Students</span><b>${s.length}</b></div><div class="card stat"><span>Staff</span><b>${t.length}</b></div>${att?`<div class="card stat"><span>Staff present today</span><b class="green">${n.filter(x=>x.status=='Present'&&x.kind=='staff').length}</b></div>`:''}</div>
+ <div class="card"><h3>Students</h3><table><tr><th>ID</th><th>Name</th><th>Class</th><th>Campus</th><th></th></tr>${s.map(x=>`<tr><td>${esc(x.regNo)}</td><td>${esc(x.surname)} ${esc(x.firstName)}</td><td>${esc(x.class)}</td><td>${esc(x.campus)}</td><td><button class="g" data-id="${esc(x.id)}" onclick="studentDash(this.dataset.id)">Open</button>${can?` <button class="s" data-id="${esc(x.id)}" onclick="delPerson('student',this.dataset.id)">Delete</button>`:''}</td></tr>`).join('')}</table></div>`)};
+{const o=V.staffreg;V.staffreg=async function(){o();
+ const s=(await list('staff')).sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+ mainEl.insertAdjacentHTML('beforeend',`<div class="card"><h3>All staff (${s.length})</h3><table><tr><th>Name</th><th>ID</th><th>Role</th><th>Position</th><th>Campus</th><th></th></tr>${s.map(x=>`<tr><td>${esc(x.name)}</td><td>${esc(x.staffId||'')}</td><td>${esc(RL[x.role]||x.role||'')}</td><td>${esc(x.position||'')}</td><td>${esc(x.campus||'')}</td><td>${DEL.includes(me.role)&&x.id!==me.uid?`<button class="s" data-id="${esc(x.id)}" onclick="delPerson('staff',this.dataset.id)">Delete</button>`:''}</td></tr>`).join('')}</table></div>`)}}
+
+// ---------- Requisitions ----------
+let REQ=[];const RQC={Pending:'#f5b700',Approved:'#1c3f94',Paid:'#12a150',Rejected:'#e5313d'};
+function reqRow(){const d=document.createElement('div');d.className='row rq';d.innerHTML='<input class="rd" placeholder="Item / description"><input class="rq_q" type="number" min="1" value="1" placeholder="Qty"><input class="rq_p" type="number" min="0" placeholder="Unit cost (₦)">';d.oninput=reqTot;$('#rq_items').appendChild(d)}
+function reqTot(){let t=0;document.querySelectorAll('.rq').forEach(r=>t+=(+r.querySelector('.rq_q').value||0)*(+r.querySelector('.rq_p').value||0));$('#rq_tot').textContent=money(t);return t}
+V.req=async function(){
+ if(!MG.includes(me.role))return;
+ REQ=(await list('requisitions')).sort((a,b)=>b.at-a.at);
+ const fin=FULL.includes(me.role),pend=REQ.filter(x=>x.status=='Pending').length;
+ set(`<div class="grid"><div class="card stat"><span>Pending approval</span><b>${pend}</b></div><div class="card stat"><span>Approved, unpaid</span><b>${money(REQ.filter(x=>x.status=='Approved').reduce((s,x)=>s+x.total,0))}</b></div><div class="card stat"><span>Paid out</span><b class="green">${money(REQ.filter(x=>x.status=='Paid').reduce((s,x)=>s+x.total,0))}</b></div></div>
+ <div class="card"><h3>New Requisition</h3><div class="row"><input id="rq_d" type="date" value="${today()}"><input id="rq_dep" placeholder="Department / unit"><select id="rq_cam"><option>Ediam</option><option>Ikot Oso</option></select></div>
+ <div class="row"><select id="rq_cat">${opts(EXP_CATS)}</select><select id="rq_tri">${opts([...TRIS,'Full session'])}</select><input id="rq_ses" placeholder="Session e.g. 2026/2027"><select id="rq_urg"><option>Normal</option><option>Urgent</option></select></div>
+ <textarea id="rq_pur" rows="2" placeholder="Purpose / justification"></textarea>
+ <p><b>Items</b></p><div id="rq_items"></div><button type="button" class="g" onclick="reqRow()">+ Add item</button>
+ <p>Total: <b id="rq_tot">₦0</b></p><button onclick="saveReq()">Submit requisition</button></div>
+ <div class="card"><h3>Requisitions</h3><table><tr><th>No</th><th>Date</th><th>Category</th><th>Purpose</th><th>Total</th><th>By</th><th>Status</th><th></th></tr>${REQ.map(x=>{const i=`data-id="${esc(x.id)}"`;return`<tr><td>${esc(x.no)}</td><td>${esc(x.date)}</td><td>${esc(x.category)}</td><td>${esc((x.purpose||'').slice(0,40))}</td><td>${money(x.total)}</td><td>${esc(x.byName)}</td><td><span class="tag" style="background:${RQC[x.status]||'#888'}">${esc(x.status)}</span></td><td><button class="g" ${i} onclick="reqPrint(this.dataset.id)">Print</button>${fin&&x.status=='Pending'?` <button ${i} onclick="reqAct(this.dataset.id,'Approved')">Approve</button> <button class="s" ${i} onclick="reqAct(this.dataset.id,'Rejected')">Reject</button>`:''}${fin&&x.status=='Approved'?` <button ${i} onclick="reqAct(this.dataset.id,'Paid')">Mark paid</button>`:''}${fin&&x.status!='Paid'?` <button class="s" ${i} onclick="reqAct(this.dataset.id,'Void')">Void</button>`:''}</td></tr>`}).join('')||'<tr><td>No requisitions yet.</td></tr>'}</table>
+ <p class="mut">Marking a requisition as Paid automatically records it as an expense in the Financial tab.</p></div>`);
+ reqRow()};
+async function saveReq(){
+ const items=[...document.querySelectorAll('.rq')].map(r=>({d:r.querySelector('.rd').value.trim(),q:+r.querySelector('.rq_q').value||0,p:+r.querySelector('.rq_p').value||0})).filter(i=>i.d&&i.q>0&&i.p>0);
+ if(!items.length)return alert('Add at least one item with quantity and unit cost.');
+ if(!v('rq_pur').trim())return alert('State the purpose of the requisition.');
+ const total=items.reduce((s,i)=>s+i.q*i.p,0),no='REQ-'+today().replace(/-/g,'')+'-'+Math.floor(1000+Math.random()*9000);
+ try{await add('requisitions',{no,date:v('rq_d'),dept:v('rq_dep').trim(),campus:v('rq_cam'),category:v('rq_cat'),trimester:v('rq_tri'),session:v('rq_ses').trim(),urgency:v('rq_urg'),purpose:v('rq_pur').trim(),items,total,status:'Pending'});
+  await notify('New requisition '+no+' ('+money(total)+') by '+me.name);go('req')}
+ catch(e){alert('Could not submit: '+(e.code||e.message))}}
+async function reqAct(id,a){
+ if(!FULL.includes(me.role))return;
+ const r=REQ.find(x=>x.id===id);if(!r)return;
+ try{
+  if(a=='Void'){if(!confirm('Void (delete) '+r.no+'?'))return;await db.doc('requisitions/'+id).delete();await notify(r.no+' voided by '+me.name);return go('req')}
+  if(a=='Paid'){if(!confirm('Release '+money(r.total)+' and record it as an expense?'))return;
+   await add('expenses',{date:today(),trimester:r.trimester,category:r.category,description:r.no+': '+r.purpose,amount:r.total,session:r.session||'',reqId:id})}
+  await db.doc('requisitions/'+id).update({status:a,actBy:me.name,actAt:Date.now()});
+  await notify(r.no+' '+a.toLowerCase()+' by '+me.name);go('req');
+ }catch(e){alert('Action failed: '+(e.code||e.message))}}
+function reqPrint(id){
+ const r=REQ.find(x=>x.id===id),w=window.open('');if(!w)return alert('Allow pop-ups.');
+ w.document.write(`<body style="font-family:Arial;padding:30px;max-width:700px"><img src="${esc(new URL(LOGO_URL,location.href).href)}" width=70><h2>Expense Requisition</h2><p><b>No:</b> ${esc(r.no)} · <b>Date:</b> ${esc(r.date)} · <b>Status:</b> ${esc(r.status)}<br><b>Department:</b> ${esc(r.dept||'-')} · <b>Campus:</b> ${esc(r.campus||'-')}<br><b>Category:</b> ${esc(r.category)} · ${esc(r.trimester)} ${esc(r.session||'')} · <b>Priority:</b> ${esc(r.urgency)}</p><p><b>Purpose:</b> ${esc(r.purpose)}</p><table border=1 cellpadding=6 style="border-collapse:collapse;width:100%"><tr><th>Item</th><th>Qty</th><th>Unit cost</th><th>Amount</th></tr>${r.items.map(i=>`<tr><td>${esc(i.d)}</td><td>${i.q}</td><td>${money(i.p)}</td><td>${money(i.q*i.p)}</td></tr>`).join('')}<tr><td colspan=3><b>Total</b></td><td><b>${money(r.total)}</b></td></tr></table><p>Requested by: ${esc(r.byName)}</p><br><p>Approved by: ______________ Date: ________<br><br>Received by: ______________ Date: ________</p><script>print()<\/script>`)}
+
+// ---- CSS + student About (read-only for students), added here so the original needs no other edits ----
+{const st=document.createElement('style');st.textContent='.top button,button.g{background:var(--gold);color:#10213f;border:0}.top button:hover,button.g:hover{filter:brightness(1.1)}.just{text-align:justify;line-height:1.75}';document.head.appendChild(st)}
+{const o=sdTab;sdTab=function(k){o(k);if(k=='ov'){const t=document.querySelector('#sdt .card p');if(t)t.classList.add('just');if(!MG.includes(me.role)){const a=document.getElementById('ab');if(a){a.nextElementSibling.remove();a.remove()}}}}}
+// ===================== END UPDATE 2 =====================
 </script></body></html>
