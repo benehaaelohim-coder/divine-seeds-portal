@@ -680,4 +680,53 @@ async function receipt(id){
  const f=(await db.doc('fees/'+id).get()).data(),s=(await db.doc('students/'+f.studentId).get()).data()||{};
  const w=window.open('');if(!w)return alert('Allow pop-ups to print the receipt.');
  w.document.write(`<body style="font-family:Arial;padding:30px;max-width:600px"><img src="${esc(new URL(LOGO_URL,location.href).href)}" width=80>${s.photo?`<img src="${esc(s.photo)}" width=90 style="float:right">`:''}<h2>Payment Receipt</h2><p><b>No:</b> ${esc(f.receiptNo||'-')}<br><b>Date:</b> ${new Date(f.at).toLocaleString()}</p><p>${esc(s.surname)} ${esc(s.firstName)} (${esc(s.regNo)})</p><p>${esc(f.type)}${f.trimester?' - '+esc(f.trimester):''}<br><b>Amount: ${money(f.amount)}</b><br>Method: ${esc(f.method||'-')}${f.ref?' · Ref: '+esc(f.ref):''}</p><p>Received by: ${esc(f.byName||'')}</p><script>print()<\/script>`)}
+
+ // ===================== FIXES (paste before the last </script>) =====================
+// 1. Show errors instead of an endless "Loading..."
+function go(k){document.querySelectorAll('aside a').forEach(a=>a.classList.toggle('on',a.dataset.k==k));side.classList.remove('open');
+ const a=document.querySelector(`aside a[data-k="${k}"]`);ttl.textContent=a?a.textContent:'';mainEl.innerHTML='<div class="card">Loading...</div>';window.scrollTo(0,0);
+ Promise.resolve().then(()=>V[k]()).then(fillBio).catch(e=>{console.error('View failed:',k,e);mainEl.innerHTML='<div class="card"><b class="red">Could not load this page.</b><p>'+esc(e.code||e.message||e)+'</p><p class="mut">If this says permission-denied, publish the latest Firestore rules and check the role in users/UID.</p></div>'})}
+
+// 2. CSV: keep negative balances as numbers
+function saveCSV(name,rows){const c=x=>{let s=String(x??'');if(typeof x!=='number'&&/^[=+\-@\t\r]/.test(s))s="'"+s;return'"'+s.replace(/"/g,'""')+'"'};
+ const b=new Blob(['\ufeff'+rows.map(r=>r.map(c).join(',')).join('\r\n')],{type:'text/csv;charset=utf-8'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),3000)}
+
+// 3. Validate button and subject delete (✕) safe with apostrophes
+V.pub=async function(){
+ const r=await list('results',['published','==',false]);
+ set(`<div class="card"><h3>Results awaiting validation</h3><table><tr><th>Student</th><th>Class</th><th>Subject</th><th>Trimester</th><th>Total</th><th></th></tr>${r.map(x=>`<tr><td>${esc(x.studentName)}</td><td>${esc(x.class||'')}</td><td>${esc(x.subject)}</td><td>${esc(x.trimester)}</td><td>${x.test+x.exam}</td><td><button data-id="${esc(x.id)}" onclick="publish(this.dataset.id)">Validate</button></td></tr>`).join('')||'<tr><td>Nothing waiting.</td></tr>'}</table>${r.length?'<button class="s" onclick="publishAll()">Validate all</button>':''}</div>`)};
+V.subj=async function(){
+ const s=await list('subjects');
+ set(`<div class="card"><h3>Subject Template (per class)</h3><select id="sj_c">${opts(CLASSES)}</select><input id="sj_n" placeholder="Subject e.g. Mathematics"><button onclick="addSubj()">Add subject</button>
+ <p><small>Scoring: Test 40 + Exam 60 = 100. Grades: A 70+, B 60+, C 50+, D 40+, F below 40.</small></p></div>`+
+ CLASSES.map(c=>{const l=s.filter(x=>x.class==c);return l.length?`<div class="card"><b>${c}</b><br>${l.map(x=>`<span class="tag" style="background:var(--acc);display:inline-block;margin:3px">${esc(x.name)} <a data-id="${esc(x.id)}" onclick="delSubj(this.dataset.id)" style="cursor:pointer">✕</a></span>`).join('')}</div>`:''}).join(''))};
+
+// 4. Hide the "admin" role unless the user is Proprietor/Admin
+{const o=V.staffreg;V.staffreg=function(){o();if(!TOP.includes(me.role)){const s=document.getElementById('f_role');if(s)[...s.options].forEach(x=>{if(x.value==='admin'||x.text==='admin')x.remove()})}}}
+
+// 5. Staff username validation
+async function addStaff(){
+ const g=G(),m=$('#rmsg');
+ if(!g.name||!g.username||!g.password||!g.role){m.textContent='Enter name, username, password, and role.';return}
+ if(g.password.length<6){m.textContent='Password must be at least 6 characters.';return}
+ if(!/^[a-z0-9._-]{3,30}$/i.test(g.username)){m.textContent='Username must be 3-30 letters, numbers, dot, dash or underscore (no spaces or @).';return}
+ try{
+  const uid=await mkUser(g.username,g.password,{role:g.role,name:g.name},g.email);
+  delete g.password;
+  await db.doc('staff/'+uid).set({...g,staffId:g.username,salary:+g.salary||0,photo,fpEnrolled:FP.t.filter(Boolean).length>0});await fpSave(uid,'staff');
+  m.innerHTML='Staff account created successfully.'+(g.email?' A password link was emailed to '+esc(g.email)+'.':'')+(g.email?aliasNote(g.email,mkUser.last):'');
+ }catch(e){console.error(e);m.textContent='Could not create staff: '+(e.code||e.message)}}
+
+// 6. Teacher attendance limited to the teacher's own class
+async function loadRoll(){
+ const kind=v('r_k')||'student',d=v('r_d')||today(),tc=me.role==='teacher',f=[['date','==',d]];
+ if(tc)f.push(['kind','==','student']);
+ try{
+  const own=tc?(await list('classes',['teacherId','==',me.uid])).map(x=>x.name):[];
+  const[pp0,rc]=await Promise.all([list(kind=='staff'?'staff':'students'),list('attendance',...f)]);
+  const pp=own.length&&kind=='student'?pp0.filter(x=>own.includes(x.class)):pp0;
+  ROLL={kind,d,ppl:pp.map(x=>kind=='staff'?{id:x.id,name:x.name,cls:x.position||'',bio:x.bioId,fp:x.fpEnrolled}:{id:x.id,name:(x.surname||'')+' '+(x.firstName||''),cls:x.class||'',bio:x.bioId,fp:x.fpEnrolled}).sort((a,b)=>a.name.localeCompare(b.name)),rec:{}};
+  rc.forEach(r=>ROLL.rec[r.uid]=r);drawRoll();
+ }catch(e){$('#r_list').textContent='Could not load: '+(e.code||e.message)}}
+// ===================== END FIXES =====================
 </script></body></html>
