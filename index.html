@@ -108,6 +108,7 @@ const CLASSES=['Creche','Nursery 1','Nursery 2','Nursery 3','Primary 1','Primary
 const TRIS=['1st Trimester','2nd Trimester','3rd Trimester'];
 const EXP_CATS=['Salaries','Utilities','Maintenance','Stationery & supplies','Transport','Feeding','Events','Other'];
 const grade=n=>n>=90?'A':n>=80?'B':n>=70?'C':n>=60?'D':n>=50?'E':'F';
+const gradeInfo=(n,sh)=>{const k=KEY[n>=90?0:n>=80?1:n>=70?2:n>=60?3:n>=50?4:5];return sh?k[0]+' · '+k[2]:k[0]+'. '+k[1]+' · '+k[2]};
 const subId=(c,n)=>(c+'_'+n).replace(/[\/\s]+/g,'_').toLowerCase();
 let me,photo='',FEE={st:[],paid:{},fs:[],owing:[]},TEACH=[],SD={},STF={},FIN={fs:[],ex:[],ses:[]};
 const loginBox=$('#loginBox'),appBox=$('#appBox'),side=$('#side'),err=$('#err'),info=$('#info'),ttl=$('#ttl'),mainEl=$('#main');
@@ -652,7 +653,7 @@ async function studentDash(id,tab){
  set(`<div class="sd">
  <div class="card sdp">${s.photo?`<img class="ph" src="${esc(s.photo)}" alt="">`:`<div class="ph" style="display:grid;place-items:center;font-size:56px;margin:0 auto">${esc((s.firstName||'?')[0])}</div>`}
  <h2>${esc(nm)}</h2><p class="mut">Student ID: ${esc(s.regNo||'-')}</p><p class="mut">${esc(cn||'-')} · ${esc(s.campus||'-')}</p>
- <div class="trio"><div><span>Average</span><b>${avg}</b></div><div><span>Attendance</span><b>${att}</b></div><div><span>Fees</span><b class="${fit?'green':'red'}">${fit?'Fit':'Owing'}</b></div></div>
+ <div class="trio"><div><span>Average</span><b>${avg}</b><span>${avg=='-'?'':gradeInfo(+avg,1)}</span></div><div><span>Attendance</span><b>${att}</b></div><div><span>Fees</span><b class="${fit?'green':'red'}">${fit?'Fit':'Owing'}</b></div></div>
  <div class="fb"><small>Fees paid ${pc}%</small><div class="bar"><i style="width:${pc}%"></i></div></div></div>
  <div class="card sdm"><div class="sdtabs">${T.map(([k,l])=>`<a data-t="${k}" onclick="sdTab('${k}')">${l}</a>`).join('')}</div><div id="sdt"></div></div>
  <div class="rc"><div class="card"><h4>Upcoming Events</h4>
@@ -672,7 +673,7 @@ function sdTab(k){
  ${acSum}
  <div class="card"><h4>Contact Info</h4><p style="line-height:1.9;margin:0">School E-mail: <b>${esc(SCHOOL.email)}</b><br>Phone: <b>${esc(SCHOOL.phone)}</b><br>Location: <b>${esc(SCHOOL.loc[s.campus]||s.campus||'-')}</b></p></div>`,
  sb:`<div class="card"><h4>Subjects - ${esc(s.class||'')}</h4><table><tr><th>Subject</th><th>Latest total</th><th>Grade</th></tr>${sj.map(x=>{const l=r.filter(y=>y.subject==x.name).sort((a,b)=>TRIS.indexOf(b.trimester)-TRIS.indexOf(a.trimester))[0],n=l?l.test+l.exam:null;return`<tr><td>${esc(x.name)}</td><td>${n==null?'-':n}</td><td>${n==null?'-':grade(n)}</td></tr>`}).join('')||'<tr><td>No subjects set for this class yet.</td></tr>'}</table></div>`,
- rs:TRIS.map(t=>{const l=r.filter(x=>x.trimester==t);if(!l.length)return'';const tot=l.reduce((a,x)=>a+x.test+x.exam,0);return`<div class="card"><h4>${t} <small>(Total ${tot} · Avg ${(tot/l.length).toFixed(1)})</small></h4><table><tr><th>Subject</th><th>Test</th><th>Exam</th><th>Total</th><th>Grade</th></tr>${l.map(x=>{const n=x.test+x.exam;return`<tr><td>${esc(x.subject)}</td><td>${x.test}</td><td>${x.exam}</td><td class="${n<50?'red':'green'}">${n}</td><td>${grade(n)}</td></tr>`}).join('')}</table></div>`}).join('')||'<div class="card">Results not yet released.</div>',
+ rs:TRIS.map(t=>{const l=r.filter(x=>x.trimester==t);if(!l.length)return'';const tot=l.reduce((a,x)=>a+x.test+x.exam,0);return`<div class="card"><h4>${t} <small>(Total ${tot} · Avg ${(tot/l.length).toFixed(1)} · ${gradeInfo(tot/l.length)})</small></h4><table><tr><th>Subject</th><th>Test</th><th>Exam</th><th>Total</th><th>Grade</th></tr>${l.map(x=>{const n=x.test+x.exam;return`<tr><td>${esc(x.subject)}</td><td>${x.test}</td><td>${x.exam}</td><td class="${n<50?'red':'green'}">${n}</td><td>${grade(n)}</td></tr>`}).join('')}</table></div>`}).join('')||'<div class="card">Results not yet released.</div>',
  ac:acSum+`<div class="card"><h4>Attendance</h4><p>Days attended <b>${here}/${at.length}</b></p></div><div class="card"><h4>Fees</h4><p>Paid <b>${money(paid)}</b> · Balance <b>${money(Math.max(due-paid,0))}</b> · Status <b class="${fit?'green':'red'}">${fit?'Fit':'Owing'}</b></p></div><div class="card"><h4>Comments</h4>${c.map(x=>`<p><b>${esc(x.byName)}</b>: ${esc(x.text)}</p>`).join('')}<input id="cm" placeholder="Write a comment"><button onclick="postComment('${id}')">Post</button></div>`,
  dc:`<div class="card"><h4>Payment Receipts</h4><table>${f.map(x=>`<tr><td>${new Date(x.at).toLocaleDateString()}</td><td>${esc(x.type)}</td><td>${money(x.amount)}</td><td><button class="g" onclick="receipt('${x.id}')">Print</button></td></tr>`).join('')||'<tr><td>No receipts.</td></tr>'}</table></div><div class="card"><h4>Result Slips</h4>${TRIS.filter(t=>r.some(x=>x.trimester==t)).map(t=>`<button class="g" onclick="slip('${t}')">${t}</button> `).join('')||'No released results yet.'}</div>`};
  $('#sdt').innerHTML=H[k]}
@@ -1007,9 +1008,9 @@ tr:nth-child(even) td{background:rgba(127,140,170,.07)}
 .nw{border-left:4px solid var(--gold)}.nw>b{font-family:Georgia,serif;font-size:17px}
 .bdg{background:var(--bad);color:#fff;border-radius:10px;font-size:11px;padding:1px 6px;margin-left:2px}
 .rd{font-size:11px;color:var(--mut)}.rd.ok{color:var(--ok);font-weight:600}
-.pban{display:flex;gap:18px;align-items:center;flex-wrap:wrap;padding:22px;border-radius:16px;margin-bottom:12px;background:linear-gradient(135deg,#10213f,#1c3f94 65%,#e0147a);color:#fff}
+.pban{display:flex;gap:18px;align-items:center;flex-wrap:wrap;padding:22px;border-radius:16px;margin-bottom:12px;background:transparent;border:1px solid var(--bd);color:var(--tx)}
 .pban .ph{width:110px;height:110px;border-radius:50%;object-fit:cover;border:4px solid var(--gold)}
-.pban h2{margin:0 0 6px;color:#fff}.pban .ch{display:inline-block;background:#ffffff26;border-radius:20px;padding:3px 12px;font-size:12px;margin:2px 4px 2px 0}
+.pban h2{margin:0 0 6px;color:var(--tx)}.pban .ch{display:inline-block;background:var(--bg);border-radius:20px;padding:3px 12px;font-size:12px;margin:2px 4px 2px 0}
 .pbtn{display:inline-block;margin-top:12px;padding:8px 14px;border-radius:10px;background:var(--gold);color:#10213f;font-weight:600;cursor:pointer;font-size:13px}
 #sdt table{max-height:380px;overflow:auto}#sdt th,.tt th{position:sticky;top:0;background:var(--card);z-index:1}
 .key{margin-top:12px;font-size:13px;line-height:1.9}
@@ -1024,23 +1025,23 @@ PAGES.push(['cls','Class Lists'],['tt','School Time Table']);SAFE.push('tt');
 
 // ---------- Grading key (new scale) ----------
 const KEY=[['A','90.00 - 100.00','Excellent'],['B','80.00 - 89.99','Very Good'],['C','70.00 - 79.99','Good'],['D','60.00 - 69.99','Fairly Good'],['E','50.00 - 59.99','Pass'],['F','0.00 - 49.99','Fail']];
-const gradeKey=()=>'<div class="card key"><h4>Grading Key</h4>'+KEY.map(([g,r,t])=>`<b>${g}.</b> ${r} &middot; ${t}`).join('<br>')+'</div>';
 {const o=V.subj;V.subj=async function(){await o();document.querySelectorAll('#main small').forEach(x=>{if(x.textContent.startsWith('Scoring'))x.textContent='Scoring: Test 40 + Exam 60 = 100. Grades: A 90+, B 80+, C 70+, D 60+, E 50+, F below 50.'})}}
 
 // ---------- Profile photo (after registration) ----------
 function setPhoto(kind,id,inp){const f=inp.files[0];if(!f)return;const im=new Image();
  im.onload=async()=>{const c=document.createElement('canvas');c.width=c.height=240;const m=Math.min(im.width,im.height);c.getContext('2d').drawImage(im,(im.width-m)/2,(im.height-m)/2,m,m,0,0,240,240);
-  try{await db.doc((kind=='staff'?'staff/':'students/')+id).update({photo:c.toDataURL('image/jpeg',.8)});kind=='staff'?go('dash'):studentDash(id,'pf')}catch(e){alert('Could not save photo: '+(e.code||e.message))}};
+  try{const ref=db.doc((kind=='staff'?'staff/':'students/')+id),d={photo:c.toDataURL('image/jpeg',.8)};await(kind=='staff'?ref.set(d,{merge:true}):ref.update(d));kind=='staff'?go('dash'):studentDash(id,'pf')}catch(e){alert('Could not save photo: '+(e.code||e.message))}};
  im.src=URL.createObjectURL(f)}
 const photoBtn=(k,id)=>`<label class="pbtn">📷 Change photo<input type="file" accept="image/*" hidden onchange="setPhoto('${k}','${esc(id)}',this)"></label>`;
-{const o=V.dash;V.dash=async function(){await o();if(me.role!='student'){const p=document.querySelector('.sdp');if(p)p.insertAdjacentHTML('beforeend',photoBtn('staff',me.uid))}}}
+{const o=stTab;stTab=function(k){o(k);if(k!='ov')return;const s=STF.s||{},nm=s.name||me.name||'';
+ $('#sdt').insertAdjacentHTML('afterbegin',`<div class="pban">${s.photo?`<img class="ph" src="${esc(s.photo)}" alt="">`:`<div class="ph" style="display:grid;place-items:center;font-size:44px;background:var(--bd)">${esc((nm||'?')[0])}</div>`}<div><h2>${esc(nm)}</h2><span class="ch">${esc(s.position||RL[me.role]||me.role)}</span><span class="ch">${esc(s.staffId||me.username||'')}</span><span class="ch">${esc(s.campus||'')}</span><br>${photoBtn('staff',me.uid)}</div></div>`)}}
 
 // ---------- Student Profile tab + record editing ----------
 const EF=[['surname','Surname'],['firstName','First name'],['middleName','Middle name'],['gender','Gender','Male,Female'],['dob','Date of birth','date'],['pob','Place of birth'],['nationality','Nationality'],['state','State of origin'],['lga','LGA'],['address','Residential address'],['phone','Phone'],['email','Student email'],['indigene','Status','Indigene,Non-Indigene'],['level','Section','Creche,Nursery,Primary,Junior High School,Senior High School'],['class','Class',CLASSES.join(',')],['session','Session'],['campus','Campus','Ediam,Ikot Oso'],['boarding','Boarding?','Day,Boarding'],['father','Father name'],['fatherPhone','Father phone'],['mother','Mother name'],['motherPhone','Mother phone'],['guardianEmail','Parent email'],['emName','Emergency contact'],['emPhone','Emergency phone'],['blood','Blood group'],['genotype','Genotype'],['allergies','Allergies'],['feeDue','Total fees due (₦)','number']];
 function profHTML(){
  const s=SD.s,nm=((s.firstName||'')+' '+(s.middleName||'')+' '+(s.surname||'')).replace(/\s+/g,' ').trim(),
  g=(t,i,a)=>`<div class="card"><h4>${i} ${t}</h4><div class="pf">${a.map(([k,l])=>`<div><span>${l}</span><b>${esc((k=='feeDue'?money(s[k]):s[k])||'-')}</b></div>`).join('')}</div></div>`;
- return `<div class="pban">${s.photo?`<img class="ph" src="${esc(s.photo)}" alt="">`:`<div class="ph" style="display:grid;place-items:center;font-size:44px;background:#ffffff26">${esc((s.firstName||'?')[0])}</div>`}<div><h2>${esc(nm)}</h2><span class="ch">${esc(s.regNo||'')}</span><span class="ch">${esc(s.class||'')}</span><span class="ch">${esc(s.campus||'')}</span><span class="ch">${esc(s.session||'')}</span>${MG.includes(me.role)?'<br><button class="g" style="margin-top:8px" onclick="editRec()">✏ Edit student record</button>':''}</div></div>`+
+ return `<div class="pban">${s.photo?`<img class="ph" src="${esc(s.photo)}" alt="">`:`<div class="ph" style="display:grid;place-items:center;font-size:44px;background:var(--bd)">${esc((s.firstName||'?')[0])}</div>`}<div><h2>${esc(nm)}</h2><span class="ch">${esc(s.regNo||'')}</span><span class="ch">${esc(s.class||'')}</span><span class="ch">${esc(s.campus||'')}</span><span class="ch">${esc(s.session||'')}</span>${MG.includes(me.role)?'<br><button class="g" style="margin-top:8px" onclick="editRec()">✏ Edit student record</button>':''}</div></div>`+
  g('Personal Information','👤',EF.slice(0,13))+g('School Details','🎓',[['regNo','Student ID'],...EF.slice(13,18),EF[28]])+g('Parent / Guardian','👪',EF.slice(18,23))+g('Emergency Contact','☎',EF.slice(23,25))+g('Health Information','🩺',EF.slice(25,28))+`<div class="card"><h4>📖 About</h4><p class="just">${esc(s.about||'No story added yet.')}</p></div>`}
 function editRec(){
  if(!MG.includes(me.role))return;const s=SD.s;
@@ -1052,7 +1053,7 @@ async function saveRec(){
  catch(e){$('#e_m').textContent='Could not save: '+(e.code||e.message)}}
 {const o=sdTab;sdTab=function(k){
  if(k=='pf'){document.querySelectorAll('[data-t]').forEach(b=>b.classList.toggle('on',b.dataset.t=='pf'));$('#sdt').innerHTML=profHTML();return}
- o(k);if(k=='rs')$('#sdt').insertAdjacentHTML('beforeend',gradeKey())}}
+ o(k)}}
 {const o=studentDash;studentDash=async function(id,tab){await o(id,tab);
  const t=document.querySelector('.sdtabs a[data-t=ov]');if(t)t.insertAdjacentHTML('afterend','<a data-t="pf" onclick="sdTab(\'pf\')">Profile</a>');
  const p=document.querySelector('.sdp');if(p&&(MG.includes(me.role)||me.uid==id))p.insertAdjacentHTML('beforeend',photoBtn('student',id));
