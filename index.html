@@ -127,8 +127,11 @@ MENU.proprietor=MENU.admin=[...MENU.principal,'staffreg:Staff & Roles','stat:Sta
 MENU.chairman=MENU.administrator=[...MENU.principal,'staffreg:Staff & Roles','stat:Stationery'];
 
 let unlocked=false;
-const bioKey=uid=>'dsbio_'+uid,bioGet=uid=>{try{return localStorage.getItem(bioKey(uid))}catch(e){return null}},
- bioSet=(uid,val)=>{try{val?localStorage.setItem(bioKey(uid),val):localStorage.removeItem(bioKey(uid))}catch(e){}},
+const bioKey=uid=>'dsbio_'+uid,
+ ckGet=k=>{const m=document.cookie.match(new RegExp('(?:^|; )'+k+'=([^;]*)'));return m?decodeURIComponent(m[1]):null},
+ ckSet=(k,x)=>{document.cookie=k+'='+(x?encodeURIComponent(x)+';max-age=31536000':';max-age=0')+';path=/;SameSite=Lax'},
+ bioGet=uid=>{let r=null;try{r=localStorage.getItem(bioKey(uid))}catch(e){}return r||ckGet(bioKey(uid))},
+ bioSet=(uid,val)=>{try{val?localStorage.setItem(bioKey(uid),val):localStorage.removeItem(bioKey(uid))}catch(e){}ckSet(bioKey(uid),val)},
  bioOK=()=>!!(window.PublicKeyCredential&&navigator.credentials),
  b64=b=>btoa(String.fromCharCode(...new Uint8Array(b))),unb64=x=>Uint8Array.from(atob(x),c=>c.charCodeAt(0));
 auth.onAuthStateChanged(async user=>{
@@ -822,4 +825,175 @@ function reqPrint(id){
 {const st=document.createElement('style');st.textContent='.top button,button.g{background:var(--gold);color:#10213f;border:0}.top button:hover,button.g:hover{filter:brightness(1.1)}.just{text-align:justify;line-height:1.75}';document.head.appendChild(st)}
 {const o=sdTab;sdTab=function(k){o(k);if(k=='ov'){const t=document.querySelector('#sdt .card p');if(t)t.classList.add('just');if(!MG.includes(me.role)){const a=document.getElementById('ab');if(a){a.nextElementSibling.remove();a.remove()}}}}}
 // ===================== END UPDATE 2 =====================
+
+// ===================== UPDATE 3 =====================
+// Paste this whole block right AFTER the line: END UPDATE 2 marker (inside the main script)
+const BUILT=Object.keys(RL);
+let CUSTOM=[],MYSUBJ=null,MSG={th:'',name:'',all:[],pp:[]};
+const LV={std:'Standard staff',mgt:'Management (like Principal)',top:'Senior management (like Chairman)'};
+const PAGES=[['dash','Dashboard'],['news','Announcements'],['msg','Messages'],['acct','My Account'],['attend','Attendance (clock-in)'],['roll','Take Attendance'],['fees','Fees & Payments'],['fin','Financial'],['req','Requisitions'],['bread','Confectionery'],['stat','Stationery'],['comp','Compute Results'],['mgmt','Overview'],['events','Events Calendar'],['notes','Notifications']];
+const SAFE=['dash','news','msg','acct','attend','bread','fees'];
+
+{const st=document.createElement('style');st.textContent='.just{text-align:justify;line-height:1.75;white-space:pre-line}';document.head.appendChild(st)}
+
+// ---------- Menus: Roles tab (Proprietor/Admin/Chairman/Administrator) + Messages tab (everyone) ----------
+[MENU.proprietor,MENU.chairman].forEach(m=>{const i=m.findIndex(x=>x.startsWith('staffreg:'));if(i>=0)m.splice(i+1,0,'roles:Roles')});
+[...new Set(Object.values(MENU))].forEach(m=>{const i=m.findIndex(x=>x.startsWith('news:'));m.splice(i+1,0,'msg:Messages')});
+
+// ---------- Settings + custom roles are loaded before the menu is built ----------
+async function loadSettings(){try{const d=await db.doc('settings/school').get();if(d.exists){const x=d.data();if(x.email)SCHOOL.email=x.email;if(x.phone)SCHOOL.phone=x.phone;if(x.loc)SCHOOL.loc={...SCHOOL.loc,...x.loc}}}catch(e){console.warn('settings',e.code)}}
+function applyRole(r){
+ const id=r.id;[MG,FULL,ATT].forEach(a=>{const i=a.indexOf(id);if(i>=0)a.splice(i,1)});
+ RL[id]=r.label;
+ let pg=r.pages||[];if(r.level!='mgt'&&r.level!='top')pg=pg.filter(k=>SAFE.includes(k));
+ MENU[id]=pg.map(k=>k+':'+(PAGES.find(p=>p[0]==k)||[0,k])[1]);
+ if(!MENU[id].length)MENU[id]=['dash:My Dashboard','acct:My Account'];
+ if(r.level=='mgt'){MG.push(id);ATT.push(id)}
+ if(r.level=='top'){MG.push(id);FULL.push(id)}}
+async function loadRoles(){try{CUSTOM=await list('roles');CUSTOM.forEach(applyRole)}catch(e){console.warn('roles',e.code)}}
+{const o=enter;enter=async function(u){await Promise.all([loadRoles(),loadSettings()]);return o(u)}}
+
+// ---------- 1. Comments show date and time ----------
+async function postComment(id){if(!v('cm').trim())return;await add('comments',{studentId:id,text:v('cm').trim(),role:me.role});studentDash(id,'ac')}
+function drawComments(){
+ const h=[...document.querySelectorAll('#sdt .card h4')].find(x=>x.textContent=='Comments');if(!h)return;
+ h.closest('.card').innerHTML='<h4>Comments</h4>'+(SD.c.slice().sort((a,b)=>a.at-b.at).map(x=>`<p><b>${esc(x.byName)}</b> <small class="mut">${esc(x.role=='student'?'Parent/Student':(RL[x.role]||''))} · ${new Date(x.at).toLocaleString()}</small><br>${esc(x.text)}</p>`).join('')||'<p class="mut">No comments yet.</p>')+`<input id="cm" placeholder="Write a comment"><button data-id="${esc(SD.id)}" onclick="postComment(this.dataset.id)">Post</button>`}
+
+// ---------- 5. Contact info editable by management only ----------
+function contactCard(){
+ const h=[...document.querySelectorAll('#sdt .card h4')].find(x=>x.textContent=='Contact Info');if(!h)return;
+ const s=SD.s,can=MG.includes(me.role);
+ h.closest('.card').innerHTML=`<h4>Contact Info</h4><p style="line-height:1.9;margin:0">School E-mail: <b>${esc(SCHOOL.email)}</b><br>Phone: <b>${esc(SCHOOL.phone)}</b><br>Location: <b>${esc(SCHOOL.loc[s.campus]||s.campus||'-')}</b></p>`+
+ (can?`<details style="margin-top:10px"><summary>Edit contact info (management only)</summary><input id="ci_e" value="${esc(SCHOOL.email)}" placeholder="School email"><input id="ci_p" value="${esc(SCHOOL.phone)}" placeholder="Phone"><input id="ci_1" value="${esc(SCHOOL.loc['Ediam']||'')}" placeholder="Ediam campus location"><input id="ci_2" value="${esc(SCHOOL.loc['Ikot Oso']||'')}" placeholder="Ikot Oso campus location"><button onclick="saveContact()">Save contact info</button></details>`:'')}
+async function saveContact(){
+ if(!MG.includes(me.role))return;
+ const d={email:v('ci_e').trim(),phone:v('ci_p').trim(),loc:{'Ediam':v('ci_1').trim(),'Ikot Oso':v('ci_2').trim()}};
+ try{await db.doc('settings/school').set(d);SCHOOL.email=d.email;SCHOOL.phone=d.phone;SCHOOL.loc=d.loc;contactCard()}
+ catch(e){alert('Could not save: '+(e.code||e.message))}}
+{const o=sdTab;sdTab=function(k){o(k);if(k=='ov')contactCard();if(k=='ac')drawComments()}}
+
+// ---------- 2. Fingerprint: stays enabled; Logout now locks instead of wiping the session ----------
+async function enableBio(){
+ const m=$('#bmsg');m.className='red';
+ if(!bioOK()){m.textContent='This browser/device does not support fingerprint sign-in.';return}
+ try{
+  if(!(await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable())){m.textContent='No fingerprint or screen-lock biometric is set up on this device.';return}
+  const c=await navigator.credentials.create({publicKey:{challenge:crypto.getRandomValues(new Uint8Array(32)),rp:{name:'Divine Seeds Portal'},user:{id:new TextEncoder().encode(me.uid),name:me.username||me.name,displayName:me.name},pubKeyCredParams:[{type:'public-key',alg:-7},{type:'public-key',alg:-257}],authenticatorSelection:{authenticatorAttachment:'platform',userVerification:'required'},timeout:60000}});
+  bioSet(me.uid,b64(c.rawId));
+  if(!bioGet(me.uid)){m.textContent='Your browser blocked saving the fingerprint setting (private mode or blocked storage). Open the portal in a normal Chrome/Safari tab using the GitHub Pages link and try again.';return}
+  $('#lockBtn').style.display='inline';V.acct();
+  const x=$('#bmsg');if(x){x.className='green';x.textContent='Fingerprint enabled. Tap Lock (or Logout) when you leave, then use "Sign in with Fingerprint".'}
+ }catch(e){m.textContent='Could not enable fingerprint ('+(e.name||e.message)+'). If the portal is opened inside Apps Script, the browser may block it; use the GitHub Pages link.'}}
+function logoutBtn(){if(me&&bioGet(me.uid))lock();else auth.signOut()}
+{const b=document.querySelector('.top button[onclick="auth.signOut()"]');if(b)b.setAttribute('onclick','logoutBtn()')}
+{const o=V.acct;V.acct=function(){o();if(me&&bioGet(me.uid))mainEl.insertAdjacentHTML('beforeend','<div class="card"><p class="mut">Logout keeps you signed in but locked, so your fingerprint still works. To fully sign out of this device:</p><button class="g" onclick="auth.signOut()">Sign out completely</button></div>')}}
+
+// ---------- 3. Teachers only compute results for subjects assigned to them ----------
+{const o=V.subj;V.subj=async function(){await o();
+ const[s,t]=await Promise.all([list('subjects'),list('staff',['role','==','teacher'])]);TEACH=t;
+ s.sort((a,b)=>CLASSES.indexOf(a.class)-CLASSES.indexOf(b.class)||a.name.localeCompare(b.name));
+ mainEl.insertAdjacentHTML('beforeend',`<div class="card"><h3>Subject Teachers</h3><p class="mut">Assign a teacher to each subject. A teacher with assigned subjects can only enter results for those subjects.</p><table><tr><th>Class</th><th>Subject</th><th>Teacher</th><th></th></tr>${s.map(x=>`<tr><td>${esc(x.class)}</td><td>${esc(x.name)}</td><td><select id="st_${esc(x.id)}" style="min-width:180px"><option value="">-- none --</option>${t.map(u=>`<option value="${esc(u.id)}" ${u.id==x.teacherId?'selected':''}>${esc(u.name)}</option>`).join('')}</select></td><td><button data-id="${esc(x.id)}" onclick="assignSubj(this.dataset.id)">Save</button></td></tr>`).join('')||'<tr><td>No subjects yet.</td></tr>'}</table></div>`)}}
+async function assignSubj(id){const t=TEACH.find(x=>x.id==v('st_'+id))||{};try{await db.doc('subjects/'+id).update({teacherId:t.id||'',teacherName:t.name||''});alert('Saved')}catch(e){alert('Could not save: '+(e.code||e.message))}}
+V.comp=async function(){
+ let cl=CLASSES;MYSUBJ=null;
+ if(me.role=='teacher'){
+  const[sj,own]=await Promise.all([list('subjects',['teacherId','==',me.uid]),list('classes',['teacherId','==',me.uid])]);
+  if(sj.length){MYSUBJ=sj.map(x=>x.id);cl=CLASSES.filter(c=>sj.some(x=>x.class==c))}
+  else if(own.length)cl=own.map(x=>x.name);
+ }
+ set(`<div class="card"><h3>Compute Results</h3>${MYSUBJ?'<p class="mut">You can only enter results for the subjects assigned to you.</p>':''}<div class="row"><select id="cp_c" onchange="compClass()">${opts(cl)}</select><select id="cp_t" onchange="loadComp()">${opts(TRIS)}</select><select id="cp_s" onchange="loadComp()"></select></div></div><div id="cp_out"></div>`);compClass()};
+async function compClass(){
+ let s=await list('subjects',['class','==',v('cp_c')]);
+ if(MYSUBJ)s=s.filter(x=>MYSUBJ.includes(x.id));
+ s.sort((a,b)=>a.name.localeCompare(b.name));
+ $('#cp_s').innerHTML=s.map(x=>`<option>${esc(x.name)}</option>`).join('')||'<option value="">No subjects available</option>';loadComp()}
+{const o=saveComp;saveComp=async function(){
+ if(MYSUBJ&&!MYSUBJ.includes(subId(v('cp_c'),v('cp_s'))))return alert('You are not assigned to this subject.');
+ return o()}}
+
+// ---------- 4. Direct messages: management <-> individual student/staff ----------
+const mbub=x=>`<div style="margin:8px 0;padding:10px 12px;border-radius:12px;background:${x.mgmt?'var(--bg)':'transparent'};border:1px solid var(--bd);border-left:3px solid ${x.mgmt?'var(--gold)':'var(--acc)'}"><b>${esc(x.byName)}</b> <small class="mut">${esc(x.mgmt?'School management':'Reply')} · ${new Date(x.at).toLocaleString()}</small><p class="just" style="margin:6px 0 0">${esc(x.text)}</p></div>`;
+function drawThread(){
+ const el=$('#mg_th');if(!el)return;
+ const l=MSG.all.filter(x=>x.thread==MSG.th);
+ el.innerHTML=MSG.th?(l.map(mbub).join('')||'<p class="mut">No messages yet. Write the first one below.</p>'):'<p class="mut">Choose a person or open a conversation.</p>'}
+function msgFilter(){const q=v('mg_q').toLowerCase();$('#mg_to').innerHTML='<option value="">-- choose person --</option>'+MSG.pp.filter(p=>(p.n+' '+p.k).toLowerCase().includes(q)||p.id==MSG.th).map(p=>`<option value="${esc(p.id)}" ${p.id==MSG.th?'selected':''}>${esc(p.n)} (${p.k})</option>`).join('')}
+function msgPick(id){MSG.th=id;const p=MSG.pp.find(x=>x.id==id);MSG.name=p?p.n:'';msgFilter();drawThread();window.scrollTo(0,0)}
+V.msg=async function(){
+ const mg=MG.includes(me.role);
+ MSG.all=(await list('messages',...(mg?[]:[['thread','==',me.uid]]))).sort((a,b)=>a.at-b.at);
+ if(!mg){MSG.th=me.uid;MSG.name=me.name;
+  set(`<div class="card"><h3>Messages with the school management</h3><div id="mg_th"></div><textarea id="mg_t" rows="3" placeholder="Write a reply to the management"></textarea><button onclick="sendMsg()">Send reply</button></div>`);return drawThread()}
+ const[s,t]=await Promise.all([list('students'),list('staff')]);
+ MSG.pp=[...t.filter(x=>x.id!==me.uid).map(x=>({id:x.id,n:x.name||'',k:'Staff'})),...s.map(x=>({id:x.id,n:((x.surname||'')+' '+(x.firstName||'')).trim(),k:'Student'}))].sort((a,b)=>a.n.localeCompare(b.n));
+ if(!MSG.pp.some(p=>p.id==MSG.th))MSG.th='';
+ const th={};MSG.all.forEach(x=>th[x.thread]=x);
+ const inbox=Object.values(th).sort((a,b)=>b.at-a.at);
+ set(`<div class="card"><h3>Send / reply to a message</h3><input id="mg_q" placeholder="🔍 Filter people by name" oninput="msgFilter()"><select id="mg_to" onchange="msgPick(this.value)"></select><div id="mg_th"></div><textarea id="mg_t" rows="3" placeholder="Write a message"></textarea><button onclick="sendMsg()">Send</button></div>
+ <div class="card"><h3>Conversations</h3>${inbox.map(x=>`<div class="ev" style="--k:${x.mgmt?'var(--gold)':'var(--acc)'}"><div><b>${esc(x.threadName||'')}</b><small>${esc(x.byName)}: ${esc((x.text||'').slice(0,60))}</small></div><span class="dt">${new Date(x.at).toLocaleString()}</span><button class="g" data-id="${esc(x.thread)}" onclick="msgPick(this.dataset.id)">Open</button></div>`).join('')||'<p class="mut">No conversations yet.</p>'}</div>`);
+ msgFilter();drawThread()};
+async function sendMsg(){
+ const t=v('mg_t').trim(),mg=MG.includes(me.role);
+ if(!MSG.th)return alert('Choose who to message.');
+ if(!t)return alert('Write a message first.');
+ try{
+  await add('messages',{thread:MSG.th,threadName:MSG.name,text:t,fromRole:me.role,mgmt:mg});
+  if(!mg)await notify('New message reply from '+me.name);
+  go('msg');
+ }catch(e){alert('Could not send: '+(e.code||e.message))}}
+
+// ---------- 6. Roles tab: add / edit custom roles, change a staff member's role ----------
+V.roles=async function(){
+ if(!FULL.includes(me.role))return set('<div class="card">You are not allowed to manage roles.</div>');
+ const[st]=await Promise.all([list('staff'),loadRoles()]);
+ st.sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+ const ks=cur=>{const k=Object.keys(RL).filter(x=>x!='student'&&(TOP.includes(me.role)||!TOP.includes(x)));if(cur&&!k.includes(cur))k.push(cur);return k.map(x=>`<option value="${esc(x)}" ${x==cur?'selected':''}>${esc(RL[x]||x)}</option>`).join('')};
+ set(`<div class="card"><h3>Add / Edit Role</h3><input id="rl_k" placeholder="Role ID: lowercase letters only e.g. viceprincipal"><input id="rl_n" placeholder="Role name e.g. Vice Principal"><select id="rl_l"><option value="std">${LV.std} (limited pages)</option><option value="mgt">${LV.mgt}</option><option value="top">${LV.top} (can void and delete)</option></select>
+ <p><b>Pages this role can open</b> <small class="mut">(Standard staff can only get: Dashboard, Announcements, Messages, My Account, Attendance clock-in, Confectionery, Fees)</small></p>
+ <div class="row">${PAGES.map(([k,l])=>`<label style="min-width:190px"><input type="checkbox" class="rl_p" value="${k}" style="width:auto;margin-right:6px">${l}</label>`).join('')}</div><button onclick="saveRole()">Save role</button><p id="rl_m" class="red"></p></div>
+ <div class="card"><h3>Custom roles</h3><table><tr><th>Name</th><th>ID</th><th>Level</th><th>Pages</th><th></th></tr>${CUSTOM.map(r=>`<tr><td>${esc(r.label)}</td><td>${esc(r.id)}</td><td>${esc(LV[r.level]||'')}</td><td>${(r.pages||[]).length}</td><td><button class="g" data-id="${esc(r.id)}" onclick="editRole(this.dataset.id)">Edit</button> <button class="s" data-id="${esc(r.id)}" onclick="delRole(this.dataset.id)">Delete</button></td></tr>`).join('')||'<tr><td>No custom roles yet.</td></tr>'}</table></div>
+ <div class="card"><h3>Built-in roles</h3><p class="mut">${Object.keys(RL).filter(k=>!CUSTOM.some(c=>c.id==k)).map(k=>esc(RL[k])).join(' · ')}</p></div>
+ <div class="card"><h3>Change a staff member's role</h3><table><tr><th>Name</th><th>ID</th><th>Role</th><th></th></tr>${st.map(x=>`<tr><td>${esc(x.name)}</td><td>${esc(x.staffId||'')}</td><td><select id="sr_${esc(x.id)}">${ks(x.role)}</select></td><td><button data-id="${esc(x.id)}" onclick="setStaffRole(this.dataset.id)">Save</button></td></tr>`).join('')||'<tr><td>No staff yet.</td></tr>'}</table><p class="mut">A changed role applies the next time that person signs in.</p></div>`)};
+async function saveRole(){
+ const id=v('rl_k').trim().toLowerCase(),label=v('rl_n').trim(),m=$('#rl_m');m.className='red';
+ if(!/^[a-z]{3,20}$/.test(id)){m.textContent='Role ID must be 3-20 lowercase letters.';return}
+ if(BUILT.includes(id)){m.textContent='That ID belongs to a built-in role. Choose another.';return}
+ if(!label){m.textContent='Enter a role name.';return}
+ const r={label,level:v('rl_l'),pages:[...document.querySelectorAll('.rl_p:checked')].map(x=>x.value),by:me.name,at:Date.now()};
+ try{await db.doc('roles/'+id).set(r);applyRole({id,...r});go('roles')}catch(e){m.textContent='Could not save: '+(e.code||e.message)}}
+function editRole(id){const r=CUSTOM.find(x=>x.id==id);if(!r)return;$('#rl_k').value=id;$('#rl_k').readOnly=true;$('#rl_n').value=r.label;$('#rl_l').value=r.level||'std';document.querySelectorAll('.rl_p').forEach(c=>c.checked=(r.pages||[]).includes(c.value));window.scrollTo(0,0)}
+async function delRole(id){
+ if(!confirm('Delete this role? Staff who have it will fall back to a basic staff menu until you give them another role.'))return;
+ try{await db.doc('roles/'+id).delete();delete MENU[id];delete RL[id];[MG,FULL,ATT].forEach(a=>{const i=a.indexOf(id);if(i>=0)a.splice(i,1)});go('roles')}catch(e){alert('Could not delete: '+(e.code||e.message))}}
+async function setStaffRole(id){
+ const r=v('sr_'+id);
+ if(id===me.uid)return alert('You cannot change your own role.');
+ if(TOP.includes(r)&&!TOP.includes(me.role))return alert('Only the Proprietor or Admin can give this role.');
+ try{
+  const cur=(await db.doc('users/'+id).get()).data()||{};
+  if(TOP.includes(cur.role)&&!TOP.includes(me.role))return alert('Only the Proprietor or Admin can change this account.');
+  await db.doc('users/'+id).update({role:r});await db.doc('staff/'+id).set({role:r},{merge:true});
+  await notify('Role changed to '+(RL[r]||r)+' by '+me.name);alert('Role updated. It applies the next time they sign in.');
+ }catch(e){alert('Could not update: '+(e.code||e.message))}}
+
+// ---------- 7. Announcements always justified ----------
+{const o=V.news;V.news=async function(){await o();document.querySelectorAll('#main .card p').forEach(p=>p.classList.add('just'))}}
+
+// ---------- 8. Chairman / Administrator: read-only overview of attendance, income, expenses, balance ----------
+{const o=V.mgmt;V.mgmt=async function(){await o();
+ if(!['chairman','administrator'].includes(me.role))return;
+ const[s,t,a,fs,ex]=await Promise.all([list('students'),list('staff'),list('attendance',['date','==',today()]),list('fees'),list('expenses')]);
+ const cnt=(k,st)=>a.filter(x=>x.kind==k&&x.status==st).length,mk=k=>a.filter(x=>x.kind==k).length,
+ sum=l=>l.reduce((z,x)=>z+(+x.amount||0),0),I=sum(fs),E=sum(ex),mon=today().slice(0,7),
+ Im=sum(fs.filter(x=>ld(x.at).slice(0,7)==mon)),Em=sum(ex.filter(x=>(x.date||ld(x.at)).slice(0,7)==mon)),
+ bc=n=>n<0?'red':'green',kn=[...TRIS,'Full session'],
+ rows=kn.map(k=>({t:k,i:sum(fs.filter(x=>x.trimester==k)),o:sum(ex.filter(x=>x.trimester==k))}));
+ const ui=I-rows.reduce((z,r)=>z+r.i,0),uo=E-rows.reduce((z,r)=>z+r.o,0);if(ui||uo)rows.push({t:'Unassigned',i:ui,o:uo});
+ const st=(l,x,c)=>`<div class="card stat"><span>${l}</span><b class="${c||''}">${x}</b></div>`;
+ mainEl.insertAdjacentHTML('afterbegin',`<div class="card"><h3>Attendance today (${today()})</h3><h5 class="mut">Staff (${t.length})</h5><div class="grid">${st('Present',cnt('staff','Present'),'green')}${st('Absent',cnt('staff','Absent'),'red')}${st('Not marked',t.length-mk('staff'))}</div>
+ <h5 class="mut">Students (${s.length})</h5><div class="grid">${st('Present',cnt('student','Present'),'green')}${st('Late',cnt('student','Late'))}${st('Absent',cnt('student','Absent'),'red')}${st('Not marked',s.length-mk('student'))}</div></div>
+ <div class="card"><h3>Income, Expenses & Balance</h3><div class="grid">${st('Total income',money(I),'green')}${st('Total expenses',money(E),'red')}${st('Balance',money(I-E),bc(I-E))}${st('This month balance',money(Im-Em),bc(Im-Em))}</div>
+ <table><tr><th>Trimester</th><th>Income</th><th>Expenses</th><th>Balance</th></tr>${rows.map(r=>`<tr><td>${esc(r.t)}</td><td class="green">${money(r.i)}</td><td class="red">${money(r.o)}</td><td class="${bc(r.i-r.o)}">${money(r.i-r.o)}</td></tr>`).join('')}</table><p class="mut">Read-only summary.</p></div>`)}}
+// ===================== END UPDATE 3 =====================
+
 </script></body></html>
