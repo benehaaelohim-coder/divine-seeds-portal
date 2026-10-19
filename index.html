@@ -107,7 +107,7 @@ const SCHOOL={email:'info@divineseeds.edu.ng',phone:'+234 800 000 0000',loc:{'Ed
 const CLASSES=['Creche','Nursery 1','Nursery 2','Nursery 3','Primary 1','Primary 2','Primary 3','Primary 4','Primary 5','Primary 6','JSS1','JSS2','JSS3','SS1','SS2','SS3'];
 const TRIS=['1st Trimester','2nd Trimester','3rd Trimester'];
 const EXP_CATS=['Salaries','Utilities','Maintenance','Stationery & supplies','Transport','Feeding','Events','Other'];
-const grade=n=>n>=70?'A':n>=60?'B':n>=50?'C':n>=40?'D':'F';
+const grade=n=>n>=90?'A':n>=80?'B':n>=70?'C':n>=60?'D':n>=50?'E':'F';
 const subId=(c,n)=>(c+'_'+n).replace(/[\/\s]+/g,'_').toLowerCase();
 let me,photo='',FEE={st:[],paid:{},fs:[],owing:[]},TEACH=[],SD={},STF={},FIN={fs:[],ex:[],ses:[]};
 const loginBox=$('#loginBox'),appBox=$('#appBox'),side=$('#side'),err=$('#err'),info=$('#info'),ttl=$('#ttl'),mainEl=$('#main');
@@ -995,5 +995,160 @@ async function setStaffRole(id){
  <div class="card"><h3>Income, Expenses & Balance</h3><div class="grid">${st('Total income',money(I),'green')}${st('Total expenses',money(E),'red')}${st('Balance',money(I-E),bc(I-E))}${st('This month balance',money(Im-Em),bc(Im-Em))}</div>
  <table><tr><th>Trimester</th><th>Income</th><th>Expenses</th><th>Balance</th></tr>${rows.map(r=>`<tr><td>${esc(r.t)}</td><td class="green">${money(r.i)}</td><td class="red">${money(r.o)}</td><td class="${bc(r.i-r.o)}">${money(r.i-r.o)}</td></tr>`).join('')}</table><p class="mut">Read-only summary.</p></div>`)}}
 // ===================== END UPDATE 3 =====================
+
+// ===================== UPDATE 4 =====================
+
+// ---------- Styling (classic, elegant) ----------
+{const st=document.createElement('style');st.textContent=`
+h2,h3,h4,.sdp h2{font-family:Georgia,'Times New Roman',serif}
+.card{box-shadow:0 2px 10px rgba(16,33,63,.06);transition:box-shadow .2s}.card:hover{box-shadow:0 6px 18px rgba(16,33,63,.12)}
+main h3{padding-bottom:6px;margin-top:0;border-bottom:2px solid var(--gold);display:inline-block}
+tr:nth-child(even) td{background:rgba(127,140,170,.07)}
+.nw{border-left:4px solid var(--gold)}.nw>b{font-family:Georgia,serif;font-size:17px}
+.bdg{background:var(--bad);color:#fff;border-radius:10px;font-size:11px;padding:1px 6px;margin-left:2px}
+.rd{font-size:11px;color:var(--mut)}.rd.ok{color:var(--ok);font-weight:600}
+.pban{display:flex;gap:18px;align-items:center;flex-wrap:wrap;padding:22px;border-radius:16px;margin-bottom:12px;background:linear-gradient(135deg,#10213f,#1c3f94 65%,#e0147a);color:#fff}
+.pban .ph{width:110px;height:110px;border-radius:50%;object-fit:cover;border:4px solid var(--gold)}
+.pban h2{margin:0 0 6px;color:#fff}.pban .ch{display:inline-block;background:#ffffff26;border-radius:20px;padding:3px 12px;font-size:12px;margin:2px 4px 2px 0}
+.pbtn{display:inline-block;margin-top:12px;padding:8px 14px;border-radius:10px;background:var(--gold);color:#10213f;font-weight:600;cursor:pointer;font-size:13px}
+#sdt table{max-height:380px;overflow:auto}#sdt th,.tt th{position:sticky;top:0;background:var(--card);z-index:1}
+.key{margin-top:12px;font-size:13px;line-height:1.9}
+.tt td,.tt th{border:1px solid var(--bd);text-align:center;font-size:12px}.tt input{width:92px;padding:5px;margin:0;font-size:12px}.tt .brk{background:var(--gold);color:#10213f;font-weight:700}`;
+document.head.appendChild(st)}
+
+// ---------- Menus: Class Lists, School Time Table; Chairman profile first ----------
+PAGES.push(['cls','Class Lists'],['tt','School Time Table']);SAFE.push('tt');
+[...new Set([MENU.principal,MENU.proprietor,MENU.chairman,MENU.teacher])].forEach(m=>m.splice(Math.max(0,m.findIndex(x=>x.startsWith('news:'))),0,'cls:Class Lists'));
+[...new Set(Object.values(MENU))].forEach(m=>m.splice(m.findIndex(x=>x.startsWith('msg:'))+1,0,'tt:School Time Table'));
+{const m=MENU.chairman,i=m.findIndex(x=>x.startsWith('dash:'));if(i>0)m.unshift(...m.splice(i,1))}
+
+// ---------- Grading key (new scale) ----------
+const KEY=[['A','90.00 - 100.00','Excellent'],['B','80.00 - 89.99','Very Good'],['C','70.00 - 79.99','Good'],['D','60.00 - 69.99','Fairly Good'],['E','50.00 - 59.99','Pass'],['F','0.00 - 49.99','Fail']];
+const gradeKey=()=>'<div class="card key"><h4>Grading Key</h4>'+KEY.map(([g,r,t])=>`<b>${g}.</b> ${r} &middot; ${t}`).join('<br>')+'</div>';
+{const o=V.subj;V.subj=async function(){await o();document.querySelectorAll('#main small').forEach(x=>{if(x.textContent.startsWith('Scoring'))x.textContent='Scoring: Test 40 + Exam 60 = 100. Grades: A 90+, B 80+, C 70+, D 60+, E 50+, F below 50.'})}}
+
+// ---------- Profile photo (after registration) ----------
+function setPhoto(kind,id,inp){const f=inp.files[0];if(!f)return;const im=new Image();
+ im.onload=async()=>{const c=document.createElement('canvas');c.width=c.height=240;const m=Math.min(im.width,im.height);c.getContext('2d').drawImage(im,(im.width-m)/2,(im.height-m)/2,m,m,0,0,240,240);
+  try{await db.doc((kind=='staff'?'staff/':'students/')+id).update({photo:c.toDataURL('image/jpeg',.8)});kind=='staff'?go('dash'):studentDash(id,'pf')}catch(e){alert('Could not save photo: '+(e.code||e.message))}};
+ im.src=URL.createObjectURL(f)}
+const photoBtn=(k,id)=>`<label class="pbtn">📷 Change photo<input type="file" accept="image/*" hidden onchange="setPhoto('${k}','${esc(id)}',this)"></label>`;
+{const o=V.dash;V.dash=async function(){await o();if(me.role!='student'){const p=document.querySelector('.sdp');if(p)p.insertAdjacentHTML('beforeend',photoBtn('staff',me.uid))}}}
+
+// ---------- Student Profile tab + record editing ----------
+const EF=[['surname','Surname'],['firstName','First name'],['middleName','Middle name'],['gender','Gender','Male,Female'],['dob','Date of birth','date'],['pob','Place of birth'],['nationality','Nationality'],['state','State of origin'],['lga','LGA'],['address','Residential address'],['phone','Phone'],['email','Student email'],['indigene','Status','Indigene,Non-Indigene'],['level','Section','Creche,Nursery,Primary,Junior High School,Senior High School'],['class','Class',CLASSES.join(',')],['session','Session'],['campus','Campus','Ediam,Ikot Oso'],['boarding','Boarding?','Day,Boarding'],['father','Father name'],['fatherPhone','Father phone'],['mother','Mother name'],['motherPhone','Mother phone'],['guardianEmail','Parent email'],['emName','Emergency contact'],['emPhone','Emergency phone'],['blood','Blood group'],['genotype','Genotype'],['allergies','Allergies'],['feeDue','Total fees due (₦)','number']];
+function profHTML(){
+ const s=SD.s,nm=((s.firstName||'')+' '+(s.middleName||'')+' '+(s.surname||'')).replace(/\s+/g,' ').trim(),
+ g=(t,i,a)=>`<div class="card"><h4>${i} ${t}</h4><div class="pf">${a.map(([k,l])=>`<div><span>${l}</span><b>${esc((k=='feeDue'?money(s[k]):s[k])||'-')}</b></div>`).join('')}</div></div>`;
+ return `<div class="pban">${s.photo?`<img class="ph" src="${esc(s.photo)}" alt="">`:`<div class="ph" style="display:grid;place-items:center;font-size:44px;background:#ffffff26">${esc((s.firstName||'?')[0])}</div>`}<div><h2>${esc(nm)}</h2><span class="ch">${esc(s.regNo||'')}</span><span class="ch">${esc(s.class||'')}</span><span class="ch">${esc(s.campus||'')}</span><span class="ch">${esc(s.session||'')}</span>${MG.includes(me.role)?'<br><button class="g" style="margin-top:8px" onclick="editRec()">✏ Edit student record</button>':''}</div></div>`+
+ g('Personal Information','👤',EF.slice(0,13))+g('School Details','🎓',[['regNo','Student ID'],...EF.slice(13,18),EF[28]])+g('Parent / Guardian','👪',EF.slice(18,23))+g('Emergency Contact','☎',EF.slice(23,25))+g('Health Information','🩺',EF.slice(25,28))+`<div class="card"><h4>📖 About</h4><p class="just">${esc(s.about||'No story added yet.')}</p></div>`}
+function editRec(){
+ if(!MG.includes(me.role))return;const s=SD.s;
+ $('#sdt').innerHTML=`<div class="card"><h4>Edit student record</h4><p class="mut">Corrections update the profile. Existing results stay under the class they were computed for.</p><div class="pf">${EF.map(([k,l,o])=>`<div><span>${l}</span>${o&&o!='date'&&o!='number'?`<select id="e_${k}"><option value=""></option>${o.split(',').map(x=>`<option ${x==s[k]?'selected':''}>${x}</option>`).join('')}</select>`:`<input id="e_${k}" type="${o||'text'}" value="${esc(s[k]??'')}">`}</div>`).join('')}</div><br><button onclick="saveRec()">Save changes</button> <button class="g" onclick="sdTab('pf')">Cancel</button><p id="e_m" class="red"></p></div>`}
+async function saveRec(){
+ const d={};EF.forEach(([k,,o])=>{const x=v('e_'+k).trim();d[k]=o=='number'?(+x||0):x});
+ if(!d.surname||!d.firstName){$('#e_m').textContent='Surname and first name are required.';return}
+ try{await db.doc('students/'+SD.id).update(d);Object.assign(SD.s,d);await notify('Student record updated: '+d.firstName+' '+d.surname+' by '+me.name);studentDash(SD.id,'pf')}
+ catch(e){$('#e_m').textContent='Could not save: '+(e.code||e.message)}}
+{const o=sdTab;sdTab=function(k){
+ if(k=='pf'){document.querySelectorAll('[data-t]').forEach(b=>b.classList.toggle('on',b.dataset.t=='pf'));$('#sdt').innerHTML=profHTML();return}
+ o(k);if(k=='rs')$('#sdt').insertAdjacentHTML('beforeend',gradeKey())}}
+{const o=studentDash;studentDash=async function(id,tab){await o(id,tab);
+ const t=document.querySelector('.sdtabs a[data-t=ov]');if(t)t.insertAdjacentHTML('afterend','<a data-t="pf" onclick="sdTab(\'pf\')">Profile</a>');
+ const p=document.querySelector('.sdp');if(p&&(MG.includes(me.role)||me.uid==id))p.insertAdjacentHTML('beforeend',photoBtn('student',id));
+ if(tab=='pf')sdTab('pf')}}
+
+// ---------- Class lists ----------
+V.cls=async function(){
+ let cl=CLASSES;
+ if(me.role=='teacher'){const o=(await list('classes',['teacherId','==',me.uid])).map(x=>x.name);if(o.length)cl=o}
+ set(`<div class="card"><h3>Class Lists</h3><select id="cl_c" onchange="drawCls()">${opts(cl)}</select></div><div id="cl_out"></div>`);drawCls()};
+async function drawCls(){
+ const c=v('cl_c'),[s0,k]=await Promise.all([list('students',['class','==',c]),list('classes',['name','==',c])]),s=s0.sort((a,b)=>(a.surname||'').localeCompare(b.surname||'')),
+ M=s.filter(x=>x.gender=='Male').length,W=s.filter(x=>x.gender=='Female').length,t=(k[0]||{}).teacherName;
+ $('#cl_out').innerHTML=`<div class="grid"><div class="card stat"><span>Population</span><b>${s.length}</b></div><div class="card stat"><span>Male</span><b>${M}</b></div><div class="card stat"><span>Female</span><b>${W}</b></div><div class="card stat"><span>Class teacher</span><b style="font-size:16px">${esc(t||'Not assigned')}</b></div></div>
+ <div class="card"><h3>${esc(c)} - Students</h3><table><tr><th>#</th><th></th><th>Name</th><th>Student ID</th><th>Gender</th><th>Campus</th><th></th></tr>${s.map((x,i)=>`<tr><td>${i+1}</td><td>${x.photo?`<img src="${esc(x.photo)}" style="width:34px;height:34px;border-radius:50%;object-fit:cover;vertical-align:middle">`:'👤'}</td><td><b>${esc(x.surname)}</b> ${esc(x.firstName)} ${esc(x.middleName||'')}</td><td>${esc(x.regNo)}</td><td>${esc(x.gender||'-')}</td><td>${esc(x.campus||'')}</td><td>${MG.includes(me.role)?`<button class="g" data-id="${esc(x.id)}" onclick="studentDash(this.dataset.id)">Open</button>`:''}</td></tr>`).join('')||'<tr><td>No students in this class.</td></tr>'}</table></div>`}
+
+// ---------- Notifications + read status (messages and announcements) ----------
+let BN=0;
+async function badge(){
+ if(!me)return;const mg=MG.includes(me.role);let n=0;
+ try{
+  n=(await list('messages',...(mg?[['mgmt','==',false]]:[['thread','==',me.uid]]))).filter(x=>!x.read&&!!x.mgmt!=mg).length;
+  if(!mg){const[a,r]=await Promise.all([list('announcements',['audience','==',me.role=='student'?'students':'staff']),list('annReads',['uid','==',me.uid])]),seen=new Set(r.map(x=>x.annId));n+=a.filter(x=>!seen.has(x.id)).length}
+ }catch(e){console.warn('badge',e.code)}
+ BN=n;const b=$('#bell');if(b){b.innerHTML='🔔'+(n?`<sup class="bdg">${n}</sup>`:'');b.title=n?n+' new':'Nothing new'}}
+function bellGo(){go(!MG.includes(me.role)||BN?'msg':'notes')}
+{const o=enter;enter=async function(u){await o(u);if(!auth.currentUser||!me)return;const b=$('#bell');b.style.display='inline';b.setAttribute('onclick','bellGo()');badge();clearInterval(window.__bt);window.__bt=setInterval(badge,60000)}}
+{const o=go;go=function(k){o(k);badge()}}
+const markRead=async ids=>{if(!ids.length)return;const b=db.batch();ids.forEach(i=>b.update(db.doc('messages/'+i),{read:true,readAt:Date.now()}));try{await b.commit()}catch(e){console.warn(e.code)}};
+function readThread(){const mg=MG.includes(me.role),u=MSG.all.filter(x=>x.thread==MSG.th&&!x.read&&!!x.mgmt!=mg);if(!u.length)return;u.forEach(x=>{x.read=true;x.readAt=Date.now()});markRead(u.map(x=>x.id)).then(badge)}
+function drawThread(){
+ const el=$('#mg_th');if(!el)return;const mg=MG.includes(me.role),l=MSG.all.filter(x=>x.thread==MSG.th);
+ el.innerHTML=MSG.th?(l.map(x=>`<div style="margin:8px 0;padding:10px 14px;border-radius:12px;background:${x.mgmt?'var(--bg)':'transparent'};border:1px solid var(--bd);border-left:3px solid ${x.mgmt?'var(--gold)':'var(--acc)'}"><b>${esc(x.byName)}</b> <small class="mut">${x.mgmt?'School management':'Reply'} · ${new Date(x.at).toLocaleString()}</small><p class="just" style="margin:6px 0">${esc(x.text)}</p>${!!x.mgmt==mg?`<span class="rd ${x.read?'ok':''}">${x.read?'✓✓ Read '+new Date(x.readAt).toLocaleString():'✓ Sent · not yet read'}</span>`:''}</div>`).join('')||'<p class="mut">No messages yet. Write the first one below.</p>'):'<p class="mut">Choose a person or open a conversation.</p>'}
+{const o=V.msg;V.msg=async function(){await o();readThread()}}
+{const o=msgPick;msgPick=function(id){o(id);readThread()}}
+async function sendMsg(){
+ const t=v('mg_t').trim(),mg=MG.includes(me.role);
+ if(!MSG.th)return alert('Choose who to message.');if(!t)return alert('Write a message first.');
+ try{await add('messages',{thread:MSG.th,threadName:MSG.name,text:t,fromRole:me.role,mgmt:mg,read:false});if(!mg)await notify('New message reply from '+me.name);go('msg')}
+ catch(e){alert('Could not send: '+(e.code||e.message))}}
+V.news=async function(){
+ const mg=MG.includes(me.role),aud=me.role=='student'?'students':'staff',a=(await list('announcements',...(mg?[]:[['audience','==',aud]]))).sort((x,y)=>y.at-x.at);
+ let rd=[],tot={},fresh=new Set();
+ if(mg){const[r,s,t]=await Promise.all([list('annReads'),list('students'),list('staff')]);rd=r;tot={students:s.length,staff:t.length}}
+ else{const r=await list('annReads',['uid','==',me.uid]),seen=new Set(r.map(x=>x.annId)),nw=a.filter(x=>!seen.has(x.id));nw.forEach(x=>fresh.add(x.id));
+  if(nw.length){const b=db.batch();nw.forEach(x=>b.set(db.doc('annReads/'+x.id+'_'+me.uid),{annId:x.id,uid:me.uid,name:me.name,role:me.role,at:Date.now()}));try{await b.commit();badge()}catch(e){console.warn(e.code)}}}
+ set((mg?`<div class="card"><h3>Post Announcement</h3><select id="aud"><option value="students">Students</option><option value="staff">Teachers & Staff</option></select><input id="ann_t" placeholder="Title"><textarea id="ann_b" rows="4" placeholder="Message"></textarea><button onclick="postNews()">Publish</button></div>`:'')+
+ (a.map(x=>{const rs=rd.filter(r=>r.annId==x.id);return`<div class="card nw"><b>${esc(x.title)}</b> <span class="tag" style="background:var(--acc)">${esc(x.audience)}</span> ${fresh.has(x.id)?'<span class="tag" style="background:var(--ok)">NEW</span>':''}<p class="just">${esc(x.body)}</p><small class="mut">${esc(x.byName)} · ${new Date(x.at).toLocaleString()}</small>${mg?`<details style="margin-top:8px"><summary class="rd ok">👁 Seen by ${rs.length} of ${tot[x.audience]||0}</summary>${rs.map(r=>`<div class="rd">✓ ${esc(r.name)} · ${new Date(r.at).toLocaleString()}</div>`).join('')||'<div class="rd">Nobody yet.</div>'}</details>`:''}</div>`}).join('')||'<div class="card">No announcements yet.</div>'))};
+
+// ---------- Validate results: owing students blocked; correct results after computing ----------
+async function owingMap(){
+ const[st,fs]=await Promise.all([list('students'),list('fees')]),p={},o={};
+ fs.forEach(x=>p[x.studentId]=(p[x.studentId]||0)+(+x.amount||0));
+ st.forEach(s=>{const b=(+s.feeDue||0)-(p[s.id]||0);if(b>0)o[s.id]=b});return o}
+let VR=[];
+V.pub=async function(){
+ const[r,ow,vr]=await Promise.all([list('results',['published','==',false]),owingMap(),list('results',['published','==',true])]);VR=vr;
+ const ok=r.filter(x=>!ow[x.studentId]).length;
+ set(`<div class="card"><h3>Results awaiting validation</h3><p class="mut">Results of students who owe fees cannot be validated until the balance is cleared.</p><table><tr><th>Student</th><th>Class</th><th>Subject</th><th>Trimester</th><th>Total</th><th>Fees</th><th></th></tr>${r.map(x=>`<tr><td>${esc(x.studentName)}</td><td>${esc(x.class||'')}</td><td>${esc(x.subject)}</td><td>${esc(x.trimester)}</td><td>${x.test+x.exam}</td><td>${ow[x.studentId]?`<span class="tag" style="background:var(--bad)">Owing ${money(ow[x.studentId])}</span>`:'<span class="green">Cleared</span>'}</td><td>${ow[x.studentId]?'':`<button data-id="${esc(x.id)}" onclick="publish(this.dataset.id)">Validate</button>`}</td></tr>`).join('')||'<tr><td>Nothing waiting.</td></tr>'}</table>${ok?`<button class="s" onclick="publishAll()">Validate all cleared (${ok})</button>`:''}</div>
+ <div class="card"><h3>Validated results - correct or recall</h3><input id="pv_q" placeholder="🔍 Search student, class or subject" oninput="drawVR()"><table><tr><th>Student</th><th>Class</th><th>Subject</th><th>Trimester</th><th>Test</th><th>Exam</th><th>Total</th><th></th></tr><tbody id="vrTb"></tbody></table></div>`);drawVR()};
+function drawVR(){const q=v('pv_q').toLowerCase();$('#vrTb').innerHTML=VR.filter(x=>((x.studentName||'')+' '+(x.subject||'')+' '+(x.class||'')).toLowerCase().includes(q)).slice(0,100).map(x=>`<tr><td>${esc(x.studentName)}</td><td>${esc(x.class||'')}</td><td>${esc(x.subject)}</td><td>${esc(x.trimester)}</td><td>${x.test}</td><td>${x.exam}</td><td>${x.test+x.exam}</td><td><button class="g" data-id="${esc(x.id)}" onclick="fixRes(this.dataset.id)">Correct</button> <button class="s" data-id="${esc(x.id)}" onclick="unval(this.dataset.id)">Recall</button></td></tr>`).join('')||'<tr><td>None found.</td></tr>'}
+async function fixRes(id){
+ const x=VR.find(r=>r.id==id),t=prompt('Test score (0-40): '+x.studentName+' - '+x.subject,x.test);if(t===null)return;
+ const e=prompt('Exam score (0-60)',x.exam);if(e===null)return;
+ if(t===''||e===''||+t<0||+t>40||+e<0||+e>60)return alert('Test must be 0-40 and exam 0-60.');
+ try{await db.doc('results/'+id).update({test:+t,exam:+e,correctedBy:me.name,correctedAt:Date.now()});await notify('Result corrected: '+x.studentName+' ('+x.subject+') by '+me.name);go('pub')}catch(err){alert('Could not save: '+(err.code||err.message))}}
+async function unval(id){if(!confirm('Recall this result for re-computation? The student will not see it until you validate again.'))return;try{await db.doc('results/'+id).update({published:false});go('pub')}catch(e){alert(e.code||e.message)}}
+async function publish(id){
+ const d=await db.doc('results/'+id).get(),b=(await owingMap())[(d.data()||{}).studentId];
+ if(b)return alert('Blocked: this student owes '+money(b)+'. Clear the fees first.');
+ await db.doc('results/'+id).update({published:true});await notify('Results validated');go('pub')}
+async function publishAll(){
+ const ow=await owingMap(),docs=(await db.collection('results').where('published','==',false).get()).docs.filter(d=>!ow[d.data().studentId]);
+ if(!docs.length)return alert('Nothing to validate (owing students are blocked).');
+ if(!confirm('Validate '+docs.length+' result(s)? Results of owing students are skipped.'))return;
+ for(let i=0;i<docs.length;i+=400){const b=db.batch();docs.slice(i,i+400).forEach(d=>b.update(d.ref,{published:true}));await b.commit()}
+ await notify('Pending results validated (owing students skipped)');go('pub')}
+
+// ---------- School Time Table (editable by management, visible to everyone) ----------
+const TTC=['JSS 1 (DIA)','JSS 1 (GOLD)','JSS 2 (DIA)','JSS 2 (GOLD)','JSS 3 (DIA)','JSS 3 (GOLD)','SS 1 (DIA)','SS 1 (GOLD)','SS 2','SS 3'],
+TTD=['Monday','Tuesday','Wednesday','Thursday','Friday'],
+TTP=[['8:00 - 8:40'],['8:40 - 9:20'],['9:20 - 10:00'],['BREAK','10:00 - 10:10'],['10:10 - 10:45'],['10:45 - 11:20'],['11:20 - 11:55'],['LUNCH','11:55 - 12:10'],['12:10 - 12:45'],['12:45 - 1:20'],['1:20 - 1:55'],['1:55 - 2:30'],['CLOSING','2:30 - 3:00']],
+TTS=['MATHS','ENG','CRS','PHE','H/ECONS','L/STOCK','INTER SCI','SCS I','SCS II','D.T','BUS','FRENCH','MUSIC','LIT','GEO','GOVT','ECONS','COMM','CHEM','PHY','BIO','AGRIC','F/MATHS','F/ACCT','CHS','CCA','DICTION','IBIBIO','DIGITAL TECH','SKILL ACQUISITION','CLUB','SPORTS','DEBATES','QUIZ','REV. MATHS','PRACT'];
+let TT={d:'Monday',edit:false,data:{}};
+V.tt=async function(){const d=await db.doc('settings/timetable').get();TT.data=d.exists?(d.data().data||{}):{};TT.edit=false;drawTT()};
+function drawTT(){
+ const can=MG.includes(me.role),e=TT.edit&&can,cell=(c,i)=>((TT.data[TT.d+'|'+c]||[])[i])||'';
+ set(`<div class="card"><h3>School Time Table</h3><div class="tabs">${TTD.map(x=>`<button class="${x==TT.d?'':'g'}" onclick="ttDay('${x}')">${x}</button>`).join('')}</div>
+ <div class="row" style="margin-bottom:8px"><button class="g" onclick="ttPrint()">🖨 Print</button>${can?(e?'<button onclick="ttSave()">💾 Save time table</button><button class="g" onclick="TT.edit=false;V.tt()">Cancel</button>':'<button onclick="TT.edit=true;drawTT()">✏ Edit time table</button>'):''}</div>
+ <p class="mut">${TT.d} · Morning devotion / roll call 7:30 - 8:00</p><datalist id="tts">${TTS.map(x=>`<option value="${x}">`).join('')}</datalist>
+ <table class="tt" id="ttb"><tr><th>Class</th>${TTP.map(p=>`<th>${p.length>1?p[0]+'<br>':''}${p[p.length-1]}</th>`).join('')}</tr>${TTC.map((c,r)=>`<tr><td><b>${c}</b></td>${TTP.map((p,i)=>p.length>1?(r?'':`<td class="brk" rowspan="${TTC.length}" style="writing-mode:vertical-rl">${p[0]}</td>`):`<td>${e?`<input list="tts" data-c="${esc(c)}" data-i="${i}" value="${esc(cell(c,i))}">`:esc(cell(c,i)||'-')}</td>`).join('')}</tr>`).join('')}</table></div>`)}
+function ttCollect(){document.querySelectorAll('#ttb input').forEach(i=>{const k=TT.d+'|'+i.dataset.c,a=TT.data[k]||(TT.data[k]=Array(13).fill(''));a[+i.dataset.i]=i.value.trim()})}
+function ttDay(x){if(TT.edit)ttCollect();TT.d=x;drawTT()}
+async function ttSave(){ttCollect();try{await db.doc('settings/timetable').set({data:TT.data,by:me.name,at:Date.now()});TT.edit=false;alert('Time table saved.');drawTT()}catch(e){alert('Could not save: '+(e.code||e.message))}}
+function ttPrint(){const w=window.open('');if(!w)return alert('Allow pop-ups.');w.document.write('<body style="font-family:Arial;padding:20px"><h2>Divine Seeds International Eket - Time Table ('+TT.d+')</h2>'+document.getElementById('ttb').outerHTML.replace(/<input[^>]*value="([^"]*)"[^>]*>/g,'$1')+'<style>table{border-collapse:collapse;font-size:11px}td,th{border:1px solid #333;padding:4px;text-align:center}</style><script>print()<\/script>')}
+// ===================== END UPDATE 4 =====================
+
 
 </script></body></html>
