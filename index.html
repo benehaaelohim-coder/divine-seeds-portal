@@ -1151,5 +1151,395 @@ async function ttSave(){ttCollect();try{await db.doc('settings/timetable').set({
 function ttPrint(){const w=window.open('');if(!w)return alert('Allow pop-ups.');w.document.write('<body style="font-family:Arial;padding:20px"><h2>Divine Seeds International Eket - Time Table ('+TT.d+')</h2>'+document.getElementById('ttb').outerHTML.replace(/<input[^>]*value="([^"]*)"[^>]*>/g,'$1')+'<style>table{border-collapse:collapse;font-size:11px}td,th{border:1px solid #333;padding:4px;text-align:center}</style><script>print()<\/script>')}
 // ===================== END UPDATE 4 =====================
 
+// ===================== UPDATE 5 : CONFECTIONERY MANAGEMENT MODULE =====================
+// Paste this whole block right AFTER the line "END UPDATE 4" (inside the main <script>, before </script>).
+{const st=document.createElement('style');st.textContent=`
+.cfl{display:block;font-size:12px;color:var(--mut);margin:4px 0}.cfl input,.cfl select,.cfl textarea{margin:3px 0 0;color:var(--tx)}
+.cfg2{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px}
+#cfm{display:none;position:fixed;inset:0;background:#000a;z-index:60;overflow:auto}.cfmb{min-height:100%;display:grid;place-items:center;padding:14px}
+.cfmc{background:var(--card);color:var(--tx);border-radius:16px;padding:20px;width:min(560px,100%);max-height:92vh;overflow:auto}
+.cft{position:fixed;right:14px;bottom:calc(14px + env(safe-area-inset-bottom,0px));background:#10213f;color:#fff;padding:12px 16px;border-radius:12px;z-index:90;max-width:min(360px,90vw);box-shadow:0 8px 30px #0006;border-left:4px solid var(--gold)}.cft.bad{border-color:var(--bad)}
+.cfbars{display:flex;align-items:flex-end;gap:4px;height:140px;overflow-x:auto}.cfbars>div{flex:1;min-width:24px;height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center}
+.cfbars i{width:100%;background:var(--pri);border-radius:4px 4px 0 0;min-height:2px}.cfbars small{font-size:10px;color:var(--mut)}
+.cfw{border-left:4px solid var(--bad);background:var(--bg);padding:10px 12px;border-radius:10px;margin-bottom:8px;font-size:14px}
+.cfp{border:1px solid var(--bd);border-radius:14px;padding:12px}.cfp h4{margin:0 0 8px}.cfp p{margin:3px 0;display:flex;justify-content:space-between;font-size:14px}
+.cfth{width:44px;height:44px;border-radius:8px;object-fit:cover;background:var(--bd)}`;document.head.appendChild(st)}
+
+const CF={tab:'dash',role:'',P:[],M:[],R:{},stock:{},C:[],cfg:{autoDeduct:true},rng:'month',from:'',to:'',cart:[],key:'',busy:false,live:false,img:'',rep:null};
+const CFT={};
+const CAP={admin:'dash,sales,prod,inv,mat,pur,exp,waste,cust,rep,pl,close,prods,rec,audit,staff,mine',
+ finance:'dash,inv,exp,cust,rep,pl,close,mine',
+ manager:'dash,sales,prod,inv,mat,pur,exp,waste,cust,rep,close,mine',
+ production:'dash,prod,inv,mat,waste,mine',
+ cashier:'dash,sales,cust,mine'};
+const CFTABS=[['dash','📊 Dashboard'],['sales','🧾 Record Sales'],['prod','🏭 Record Production'],['inv','📦 Product Inventory'],['mat','🧂 Raw Materials'],['pur','🛒 Purchases'],['exp','💸 Expenses'],['waste','🗑 Wastage'],['cust','👥 Customers'],['rep','📑 Reports'],['pl','💰 Profit & Loss'],['close','🔒 Daily Closing'],['prods','🏷 Products'],['rec','📖 Recipes'],['audit','🕵 Audit Trail'],['staff','🔑 Staff Access'],['mine','👤 My Transactions']];
+const PCAT=['Bread','Pastry','Cake','Snack','Drink','Other'],PUNIT=['piece','loaf','pack','dozen','kg','bag','litre'],
+ MCAT=['Flour & Grains','Sweeteners','Fats & Oils','Dairy & Eggs','Meat','Vegetables & Spices','Packaging','Other'],MUNIT=['kg','g','bag','litre','ml','piece','carton','crate','pack','roll'],
+ ECAT=['Electricity','Gas','Fuel','Transportation','Repairs','Equipment','Packaging','Maintenance','Cleaning materials','Staff-related','Raw materials','Miscellaneous'],
+ WR=['Burnt','Damaged','Expired','Returned','Spoilt','Production error'],PAYM=['Cash','Transfer','POS','Credit'];
+const CFN=n=>+n||0,cfR2=n=>Math.round((+n||0)*100)/100,cfc=n=>db.collection('cf_'+n),cfOn=k=>(CAP[CF.role]||'').split(',').includes(k);
+const cfSum=(a,f)=>a.reduce((s,x)=>s+CFN(f(x)),0);
+const cst=o=>({...o,by:me.uid,byName:me.name,at:Date.now(),createdBy:me.uid,createdAt:Date.now(),updatedBy:me.uid,updatedAt:Date.now()});
+const cfUp=o=>({...o,updatedBy:me.uid,updatedAt:Date.now(),by:me.uid});
+const cfAud=(t,action,ref,o,n,text)=>t.set(cfc('audit').doc(),{uid:me.uid,user:me.name,role:me.role,action,ref:ref||'',old:o==null?'':JSON.stringify(o),new:n==null?'':JSON.stringify(n),text:text||action,at:Date.now(),ymd:today(),time:new Date().toLocaleTimeString()});
+const cfFx=(t,o)=>t.set(cfc('fintx').doc(o.id),cst({status:'ok',...o}));
+const cfL=async(c,...f)=>{try{return await list('cf_'+c,...f)}catch(e){console.warn('cf_'+c,e.code);return[]}};
+const cfSlug=s=>String(s).toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,'')||'x';
+function cfToast(m,bad){const d=document.createElement('div');d.className='cft'+(bad?' bad':'');d.textContent=m;document.body.appendChild(d);setTimeout(()=>d.remove(),4500)}
+function cfModal(h){let m=$('#cfm');if(!m){m=document.createElement('div');m.id='cfm';document.body.appendChild(m)}m.innerHTML='<div class="cfmb"><div class="cfmc">'+h+'</div></div>';m.style.display='block'}
+function cfClose(){const m=$('#cfm');if(m)m.style.display='none'}
+const cfG=()=>Object.fromEntries([...document.querySelectorAll('[id^=m_]')].map(e=>[e.id.slice(2),e.type=='checkbox'?e.checked:e.value.trim()]));
+const cfF=(id,l,t,val,x)=>`<label class="cfl">${l}<input id="m_${id}" type="${t||'text'}" value="${esc(val??'')}" ${x||''}></label>`;
+const cfS=(id,l,arr,val,x)=>`<label class="cfl">${l}<select id="m_${id}" ${x||''}>${arr.map(o=>{const[a,b]=Array.isArray(o)?o:[o,o];return`<option value="${esc(a)}" ${a==val?'selected':''}>${esc(b)}</option>`}).join('')}</select></label>`;
+const cfBody=h=>{const e=$('#cfb');if(e)e.innerHTML=h};
+const cfCard=(l,x)=>`<div class="card stat"><b>${x}</b><span>${l}</span></div>`;
+const cfBars=(t,labs,vals)=>{const mx=Math.max(1,...vals);return`<div class="card"><h4>${t}</h4><div class="cfbars">${vals.map((x,i)=>`<div title="${esc(labs[i])}: ${cfR2(x)}"><i style="height:${Math.round(Math.max(x,0)/mx*100)}%"></i><small>${esc(labs[i])}</small></div>`).join('')}</div></div>`};
+const cfHead=(a)=>'<tr>'+a.map(x=>`<th>${x}</th>`).join('')+'</tr>';
+async function cfRun(fn,ok){if(CF.busy)return;CF.busy=true;try{const r=await fn();if(ok)cfToast(ok);return r===undefined?true:r}catch(e){console.error(e);cfToast(e.code=='permission-denied'?'Permission denied: publish the latest Firestore rules and check your confectionery role.':(e.message||String(e)),true)}finally{CF.busy=false}}
+
+// Accountants (Finance Officers) get the Confectionery page in their menu
+if(MENU.accountant&&!MENU.accountant.some(x=>x.startsWith('bread:')))MENU.accountant.splice(1,0,'bread:Confectionery');
+// ---------- role + data ----------
+async function cfRoleOf(){
+ if(FULL.includes(me.role))return'admin';
+ if(me.role==='accountant')return'finance';
+ if(MG.includes(me.role))return'manager';
+ if(me.role==='confectionery'){try{const d=await cfc('perms').doc(me.uid).get();return d.exists?d.data().cfRole:'manager'}catch(e){return'manager'}}
+ return''}
+async function cfInit(){
+ CF.role=await cfRoleOf();if(!CF.role)throw new Error('You do not have access to the Confectionery module.');
+ const[p,m,r,s,c,g]=await Promise.all([cfL('products'),cfL('materials'),cfL('recipes'),cfL('stock'),cfL('customers'),cfc('settings').doc('main').get().catch(()=>null)]);
+ CF.P=p.sort((a,b)=>a.name>b.name?1:-1);CF.M=m.sort((a,b)=>a.name>b.name?1:-1);CF.R=Object.fromEntries(r.map(x=>[x.id,x]));CF.stock=Object.fromEntries(s.map(x=>[x.id,x]));CF.C=c;
+ if(g&&g.exists)CF.cfg={...CF.cfg,...g.data()}}
+V.bread=async function(){await cfInit();cfLive();return cfDraw()};
+async function cfDraw(){
+ if(!cfOn(CF.tab))CF.tab='dash';
+ set(`<div class="tabs">${CFTABS.filter(x=>cfOn(x[0])).map(([k,l])=>`<button class="${k==CF.tab?'':'g'}" onclick="cfGo('${k}')">${l}</button>`).join('')}</div><div id="cfb"><div class="card">Loading...</div></div>`);
+ try{await CFT[CF.tab]()}catch(e){console.error(e);cfBody(`<div class="card"><b class="red">Could not load this tab.</b><p>${esc(e.code||e.message||e)}</p><p class="mut">If this says permission-denied, publish the latest Firestore rules.</p></div>`)}}
+const cfGo=k=>{CF.tab=k;cfDraw()};
+const cfLow=()=>new Set([...CF.P.filter(p=>p.status!='Inactive'&&CFN(p.min)>0&&CFN(CF.stock[p.id]?.qty)<CFN(p.min)).map(p=>'p'+p.id),...CF.M.filter(m=>CFN(m.min)>0&&CFN(m.balance)<CFN(m.min)).map(m=>'m'+m.id)]);
+async function cfAfter(msg){
+ const b=cfLow();await cfInit();const a=cfLow();
+ if(msg)cfc('notes').add(cst({msg})).catch(()=>{});
+ for(const k of a)if(!b.has(k)){const p=k[0]=='p'?CF.P.find(x=>'p'+x.id==k):CF.M.find(x=>'m'+x.id==k);const cur=k[0]=='p'?CFN(CF.stock[p.id]?.qty):p.balance;
+  cfc('notes').add(cst({msg:'⚠️ '+p.name.toUpperCase()+' LOW STOCK: '+cur+' left, minimum '+p.min})).catch(()=>{})}
+ cfDraw()}
+function cfLive(){if(CF.live)return;CF.live=true;const t0=Date.now();let first=true,tm;
+ cfc('notes').where('at','>',t0).onSnapshot(s=>s.docChanges().forEach(c=>{if(c.type=='added'&&c.doc.data().by!=me.uid)cfToast(c.doc.data().msg)}),()=>{});
+ cfc('stock').onSnapshot(()=>{if(first){first=false;return}clearTimeout(tm);tm=setTimeout(async()=>{const m=$('#cfm');if(CF.tab=='dash'&&$('#cfb')&&!(m&&m.style.display=='block')){await cfInit();cfDraw()}},900)},()=>{})}
+
+// ---------- ranges / print ----------
+function cfRng(){const d=new Date(),y=d.getFullYear(),m=d.getMonth(),dd=d.getDate(),k=CF.rng;
+ if(k=='today')return[today(),today()];if(k=='yest'){const z=ld(new Date(y,m,dd-1));return[z,z]}
+ if(k=='week')return[ld(new Date(y,m,dd-(d.getDay()+6)%7)),today()];if(k=='month')return[ld(new Date(y,m,1)),today()];
+ if(k=='last')return[ld(new Date(y,m-1,1)),ld(new Date(y,m,0))];if(k=='year')return[y+'-01-01',today()];
+ return[CF.from||today(),CF.to||today()]}
+const cfRangeUI=()=>`<div class="row" style="margin-bottom:10px"><select onchange="CF.rng=this.value;cfDraw()">${[['today','Today'],['yest','Yesterday'],['week','This Week'],['month','This Month'],['last','Last Month'],['year','This Year'],['custom','Custom Range']].map(([k,l])=>`<option value="${k}" ${CF.rng==k?'selected':''}>${l}</option>`).join('')}</select>${CF.rng=='custom'?`<input type="date" value="${CF.from}" onchange="CF.from=this.value"><input type="date" value="${CF.to}" onchange="CF.to=this.value;cfDraw()">`:''}</div>`;
+function cfPrintHTML(title,html){const w=window.open('');if(!w)return alert('Allow pop-ups to print.');w.document.write(`<body style="font-family:Arial;padding:24px"><img src="${esc(new URL(LOGO_URL,location.href).href)}" width=70><h2>Divine Seeds International Eket - ${esc(title)}</h2><p>Printed ${new Date().toLocaleString()} by ${esc(me.name)}</p>${html}<style>table{border-collapse:collapse;width:100%;font-size:13px}td,th{border:1px solid #999;padding:5px;text-align:left}</style><script>print()<\/script>`)}
+
+// ===================== DASHBOARD =====================
+CFT.dash=async function(){
+ const y=today(),adm=['admin','finance'].includes(CF.role),mon=adm||CF.role=='manager',yr=y.slice(0,4)+'-01-01';
+ const[days,sales,exps,wst,cust,notes]=await Promise.all([cfL('days',['ymd','==',y]),
+  mon?cfL('sales',['ymd','>=',yr]):CF.role=='cashier'?cfL('sales',['by','==',me.uid]):[],
+  adm?cfL('expenses',['ymd','>=',yr]):[],adm?cfL('wastage',['ymd','>=',yr]):[],mon||CF.role=='cashier'?cfL('customers'):[],
+  cfc('notes').orderBy('at','desc').limit(8).get().then(s=>s.docs.map(d=>d.data())).catch(()=>[])]);
+ const dm=Object.fromEntries(days.map(d=>[d.pid,d])),act=CF.P.filter(p=>p.status!='Inactive');
+ const R=act.map(p=>{const s=CFN(CF.stock[p.id]?.qty),d=dm[p.id],o=d?CFN(d.open):s;return{p,open:o,pr:d?CFN(d.produced):0,so:d?CFN(d.sold):0,w:d?CFN(d.wasted):0,left:s}});
+ const ok=sales.filter(x=>x.status=='ok'),ts=ok.filter(x=>x.ymd==y),rev=cfSum(ts,x=>x.total),cg=cfSum(ts,x=>x.cogs);
+ const te=exps.filter(x=>x.ymd==y&&x.status=='Approved'),ex=cfSum(te,x=>x.amount),wc=cfSum(wst.filter(x=>x.ymd==y),x=>x.cost);
+ const lowM=CF.M.filter(m=>CFN(m.min)>0&&CFN(m.balance)<CFN(m.min)),lowP=R.filter(r=>CFN(r.p.min)>0&&r.left<CFN(r.p.min));
+ const matVal=cfSum(CF.M,m=>m.balance*m.unitCost),invVal=cfSum(act,p=>CFN(CF.stock[p.id]?.qty)*CFN(CF.stock[p.id]?.avgCost));
+ let h=`<div class="grid">${cfCard("Today's Opening Inventory",cfSum(R,r=>r.open))}${cfCard("Today's Production",cfSum(R,r=>r.pr))}${cfCard("Today's Sales (units)",cfSum(R,r=>r.so))}${cfCard('Current Inventory',cfSum(R,r=>r.left))}`;
+ if(mon)h+=cfCard("Today's Revenue",money(rev));
+ if(CF.role=='cashier')h+=cfCard('My Sales Today',money(cfSum(ts,x=>x.total)));
+ if(adm)h+=cfCard("Today's Expenses",money(ex))+cfCard('Estimated Profit (today)',`<span class="${rev-cg-wc-ex<0?'red':'green'}">${money(rev-cg-wc-ex)}</span>`);
+ if(CF.role!='cashier')h+=cfCard('Raw Materials Remaining',CF.M.length+' items'+(mon?' · '+money(matVal):''));
+ h+='</div>';
+ if(lowM.length||lowP.length)h+=`<div class="card"><h3>⚠️ Low Stock Alerts</h3>${lowP.map(r=>`<div class="cfw"><b>${esc(r.p.name.toUpperCase())} LOW STOCK</b><br>Current: ${r.left} · Minimum: ${r.p.min} · Recommended production: ${Math.max(r.p.min-r.left,0)}</div>`).join('')}${lowM.map(m=>`<div class="cfw"><b>${esc(m.name.toUpperCase())} LOW STOCK</b><br>Current: ${m.balance} ${esc(m.unit)} · Minimum: ${m.min} ${esc(m.unit)} · Recommended purchase: ${cfR2(m.min-m.balance)} ${esc(m.unit)}</div>`).join('')}</div>`;
+ h+=`<div class="grid">${R.map(r=>`<div class="cfp"><h4>${esc(r.p.name.toUpperCase())}</h4><p><span>Opening</span><b>${r.open}</b></p><p><span>Produced</span><b>${r.pr}</b></p><p><span>Available</span><b>${r.open+r.pr}</b></p><p><span>Sold</span><b>${r.so}</b></p><p><span>Wasted</span><b>${r.w}</b></p><p><span>Remaining</span><b class="${CFN(r.p.min)>0&&r.left<CFN(r.p.min)?'red':'green'}">${r.left}</b></p></div>`).join('')||'<div class="card mut">No products yet. An administrator can add them in the Products tab.</div>'}</div>`;
+ if(adm){
+  const pend=exps.filter(x=>x.status=='Pending'),owe=cfSum(cust,c=>c.owing),mo=ld(new Date(new Date().getFullYear(),new Date().getMonth(),1)),top={};
+  ok.filter(x=>x.ymd>=mo).forEach(s=>s.items.forEach(i=>top[i.name]=(top[i.name]||0)+i.qty));
+  const tp=Object.entries(top).sort((a,b)=>b[1]-a[1]).slice(0,5);
+  h+=`<div class="grid">${cfCard('Inventory Value (at cost)',money(invVal))}${cfCard('Raw Material Value',money(matVal))}${cfCard('Pending Approvals',pend.length)}${cfCard('Outstanding Customer Payments',money(owe))}</div>
+  <div class="grid"><div class="card"><h4>Top Selling Products (this month)</h4>${tp.map(t=>`<p>${esc(t[0])}: <b>${t[1]}</b></p>`).join('')||'<p class="mut">No sales yet.</p>'}</div>
+  <div class="card"><h4>Today's payment breakdown</h4>${['Cash','Transfer','POS'].map(m=>`<p>${m}: <b>${money(cfSum(ts.filter(x=>x.method==m),x=>x.paid))}</b></p>`).join('')}<p>Credit given: <b>${money(cfSum(ts,x=>x.balance))}</b></p></div></div>`;
+  const D=[];for(let i=13;i>=0;i--)D.push(ld(Date.now()-i*864e5));
+  const by=(a,f,k)=>D.map(d=>cfSum(a.filter(x=>x[k||'ymd']==d),f)),lab=D.map(d=>d.slice(5));
+  const rv=by(ok,x=>x.total),cgd=by(ok,x=>x.cogs),exd=by(exps.filter(x=>x.status=='Approved'),x=>x.amount),mrev=Array.from({length:12},(_,m)=>cfSum(ok.filter(x=>+x.ymd.slice(5,7)==m+1),x=>x.total));
+  const pdays=await cfL('days',['ymd','>=',D[0]]);
+  h+=cfBars('Daily sales (14 days)',lab,rv)+cfBars('Monthly revenue (this year)',['J','F','M','A','M','J','J','A','S','O','N','D'],mrev)+cfBars('Daily expenses (14 days)',lab,exd)+cfBars('Production (14 days)',lab,by(pdays,x=>x.produced))+cfBars('Profit trend (14 days)',lab,rv.map((r,i)=>r-cgd[i]-exd[i]));
+ }
+ h+=`<div class="card"><h4>Recent activity</h4>${notes.map(n=>`<p>${esc(n.msg)} <small class="mut">${esc(n.byName||'')} · ${new Date(n.at).toLocaleString()}</small></p>`).join('')||'<p class="mut">Nothing yet.</p>'}</div>`;
+ cfBody(h)};
+
+// ===================== TRANSACTION CORE =====================
+// Reads everything needed FIRST (closing lock, TXN counter, stock + daily record per product), writes later via cfFlush.
+async function cfPre(t,pids){
+ const ymd=today(),cl=await t.get(cfc('closings').doc(ymd));
+ if(cl.exists&&CF.role!='admin')throw new Error('Today ('+ymd+') is already closed. Only an administrator can post to a closed day.');
+ const ct=await t.get(cfc('counters').doc(ymd)),S={};let n=ct.exists?CFN(ct.data().n):0;
+ for(const p of pids){const sk=await t.get(cfc('stock').doc(p)),dk=await t.get(cfc('days').doc(ymd+'_'+p)),pr=CF.P.find(x=>x.id==p),q=sk.exists?CFN(sk.data().qty):0;
+  S[p]={qty:q,avg:sk.exists?CFN(sk.data().avgCost):0,name:pr?pr.name:p,cost:pr?CFN(pr.cost):0,day:dk.exists?dk.data():{ymd,pid:p,name:pr?pr.name:p,open:q,produced:0,sold:0,wasted:0,adj:0,revenue:0}}}
+ // Opening inventory = yesterday's closing, because the stock balance carries over automatically
+ return{ymd,S,next:()=>'TXN-'+ymd.replace(/-/g,'')+'-'+String(++n).padStart(4,'0'),cnt:()=>n}}
+function cfFlush(t,P){
+ for(const p in P.S){const s=P.S[p];if(s.qty<0)throw new Error('Not enough '+s.name+' in stock (would go negative).');s.day.close=s.qty;
+  t.set(cfc('stock').doc(p),{qty:s.qty,avgCost:cfR2(s.avg),name:s.name,updatedAt:Date.now(),updatedBy:me.uid,by:me.uid},{merge:true});
+  t.set(cfc('days').doc(P.ymd+'_'+p),{...s.day,updatedAt:Date.now(),updatedBy:me.uid,by:me.uid})}
+ t.set(cfc('counters').doc(P.ymd),{n:P.cnt(),updatedAt:Date.now(),by:me.uid})}
+
+// ===================== POS SALES =====================
+CFT.sales=async function(){
+ if(!CF.key)CF.key='k'+Date.now().toString(36)+Math.random().toString(36).slice(2,8);
+ const pr=CF.P.filter(p=>p.status!='Inactive'),own=CF.role=='cashier'?[['by','==',me.uid]]:[['ymd','==',today()]];
+ let ts=await cfL('sales',...own);ts=ts.filter(x=>x.ymd==today()).sort((a,b)=>b.at-a.at);
+ cfBody(`<div class="card"><h3>New Sale</h3><div class="row"><select id="m_sp">${pr.map(p=>`<option value="${p.id}">${esc(p.name)} - ${money(p.price)} (stock ${CFN(CF.stock[p.id]?.qty)})</option>`).join('')}</select><input id="m_sq" type="number" min="1" value="1" placeholder="Qty"><button onclick="cfAddItem()">+ Add</button></div><div id="cfcart"></div></div>
+ <div class="card"><div class="cfg2">${cfF('sd','Discount (₦)','number','','oninput="cfCart()"')}${cfS('sm','Payment method',PAYM,'Cash','onchange="cfCart()"')}${cfF('pp','Amount paid (blank = full)','number','','oninput="cfCart()"')}${cfS('sc','Customer (needed for credit)',[['','Walk-in customer'],...CF.C.map(c=>[c.id,c.name+(CFN(c.owing)?' (owes '+money(c.owing)+')':'')])],'')}</div><div id="cfsum"></div><button id="cfpay" onclick="cfSell()">✔ Complete sale</button></div>
+ <div class="card"><h3>${CF.role=='cashier'?'My sales today':"Today's sales"}</h3><table>${cfHead(['Receipt','Time','Items','Total','Paid','Balance','Method','Cashier','Status',''])}${ts.map(s=>`<tr><td>${esc(s.id)}</td><td>${new Date(s.at).toLocaleTimeString()}</td><td>${esc(s.items.map(i=>i.qty+' '+i.name).join(', '))}</td><td>${money(s.total)}</td><td>${money(s.paid)}</td><td>${money(s.balance)}</td><td>${esc(s.method)}</td><td>${esc(s.byName)}</td><td>${s.status=='ok'?'OK':'<span class="red">VOID</span>'}</td><td><button class="g" onclick="cfReceipt('${esc(s.id)}')">Receipt</button>${CF.role=='admin'&&s.status=='ok'?` <button class="s" onclick="cfVoid('${esc(s.id)}')">Void</button>`:''}</td></tr>`).join('')||'<tr><td colspan=10 class="mut">No sales yet today.</td></tr>'}</table></div>`);
+ CF.today=ts;cfCart()};
+function cfAddItem(){const p=CF.P.find(x=>x.id==v('m_sp')),q=CFN(v('m_sq'));if(!p||q<=0)return;const i=CF.cart.find(x=>x.pid==p.id);
+ if(CFN(i?i.qty+q:q)>CFN(CF.stock[p.id]?.qty))return cfToast('Only '+CFN(CF.stock[p.id]?.qty)+' '+p.name+' in stock',true);
+ if(i)i.qty+=q;else CF.cart.push({pid:p.id,name:p.name,qty:q,price:CFN(p.price)});cfCart()}
+function cfCart(){const c=$('#cfcart');if(!c)return;const sub=cfSum(CF.cart,i=>i.qty*i.price),d=Math.min(CFN(v('m_sd')),sub),tot=sub-d,m=v('m_sm'),pd=v('m_pp')===''?(m=='Credit'?0:tot):CFN(v('m_pp'));
+ c.innerHTML=`<table>${cfHead(['Product','Qty','Price','Total',''])}${CF.cart.map((i,k)=>`<tr><td>${esc(i.name)}</td><td>${i.qty}</td><td>${CF.role=='admin'?`<input type="number" value="${i.price}" style="width:90px" onchange="CF.cart[${k}].price=+this.value||0;cfCart()">`:money(i.price)}</td><td>${money(i.qty*i.price)}</td><td><button class="g" onclick="CF.cart.splice(${k},1);cfCart()">✕</button></td></tr>`).join('')||'<tr><td colspan=5 class="mut">Cart is empty</td></tr>'}</table>`;
+ const s=$('#cfsum');if(s)s.innerHTML=`<p>Subtotal <b>${money(sub)}</b> · Discount <b>${money(d)}</b> · <b>Total ${money(tot)}</b> · Paid <b>${money(pd)}</b> · Balance <b class="${tot-pd>0?'red':''}">${money(tot-pd)}</b></p>`}
+async function cfSell(){
+ const it=CF.cart.map(i=>({...i}));if(!it.length)return cfToast('Add at least one product',true);
+ const sub=cfSum(it,i=>i.qty*i.price),disc=Math.min(CFN(v('m_sd')),sub),total=sub-disc,method=v('m_sm'),paid=v('m_pp')===''?(method=='Credit'?0:total):CFN(v('m_pp')),bal=total-paid,cid=v('m_sc');
+ if(paid>total||paid<0)return cfToast('Amount paid cannot be more than the total',true);
+ if(bal>0&&!cid)return cfToast('Select a customer for credit or part payment',true);
+ const cu=CF.C.find(c=>c.id==cid),before=cfLow();
+ const r=await cfRun(()=>db.runTransaction(async t=>{
+  if((await t.get(cfc('keys').doc(CF.key))).exists)throw new Error('Duplicate submission blocked - this sale was already recorded.');
+  const P=await cfPre(t,it.map(i=>i.pid)),cs=cid?await t.get(cfc('customers').doc(cid)):null;let cogs=0;
+  const items=it.map(i=>{const s=P.S[i.pid];if(i.qty>s.qty)throw new Error('Not enough '+s.name+': only '+s.qty+' left');const uc=s.avg||s.cost;cogs+=i.qty*uc;s.qty-=i.qty;s.day.sold=CFN(s.day.sold)+i.qty;s.day.revenue=CFN(s.day.revenue)+i.qty*i.price;return{pid:i.pid,name:i.name,qty:i.qty,price:i.price,cost:cfR2(uc),total:i.qty*i.price}});
+  const id=P.next(),sale={id,items,subtotal:sub,discount:disc,total,paid,balance:bal,method,customerId:cid||'',customerName:cu?cu.name:'Walk-in',cogs:cfR2(cogs),ymd:P.ymd,status:'ok',key:CF.key};
+  t.set(cfc('sales').doc(id),cst(sale));
+  cfFx(t,{id,type:bal>0&&paid==0?'CREDIT SALE':'SALE',amount:total,paid,balance:bal,method,cogs:cfR2(cogs),ref:id,refType:'sale',ymd:P.ymd,desc:items.map(i=>i.qty+' '+i.name).join(', ')});
+  if(cs&&cs.exists&&bal>0)t.set(cfc('customers').doc(cid),cfUp({owing:CFN(cs.data().owing)+bal}),{merge:true});
+  t.set(cfc('keys').doc(CF.key),{at:Date.now(),by:me.uid,id});
+  cfFlush(t,P);cfAud(t,'SALE',id,null,{total,paid,items},`${me.name} recorded sale ${id} of ${money(total)}`);return sale}),'Sale completed');
+ if(r&&r!==true){CF.cart=[];CF.key='';CF.last=r;await cfAfter(items2msg(r));cfReceipt(r.id,r)}}
+const items2msg=s=>s.items.map(i=>i.qty+' '+i.name).join(', ')+' sold ('+money(s.total)+')';
+function cfReceiptHTML(s){return`<div style="font-family:Arial;max-width:420px"><h3 style="margin:0">DIVINE SEEDS INTERNATIONAL EKET</h3><p style="margin:0">Confectionery - Sales Receipt</p><p><b>Receipt No:</b> ${esc(s.id)}<br><b>Date:</b> ${new Date(s.at).toLocaleString()}<br><b>Cashier:</b> ${esc(s.byName)}<br><b>Customer:</b> ${esc(s.customerName||'Walk-in')}</p><table style="width:100%;font-size:13px"><tr><th>Item</th><th>Qty</th><th>Price</th><th>Total</th></tr>${s.items.map(i=>`<tr><td>${esc(i.name)}</td><td>${i.qty}</td><td>${money(i.price)}</td><td>${money(i.total)}</td></tr>`).join('')}</table><p>Subtotal: ${money(s.subtotal)}<br>Discount: ${money(s.discount)}<br><b>Total: ${money(s.total)}</b><br>Paid (${esc(s.method)}): ${money(s.paid)}<br>Balance: ${money(s.balance)}</p><p>Thank you!</p></div>`}
+function cfReceipt(id,s){s=s||(CF.today||[]).find(x=>x.id==id);if(!s)return;cfModal(cfReceiptHTML(s)+`<div class="row"><button onclick="cfPrintHTML('Receipt ${esc(s.id)}',document.getElementById('cfrc').innerHTML)">🖨 Print</button><button class="g" onclick="cfClose();cfDraw()">Close</button></div><div id="cfrc" style="display:none">${cfReceiptHTML(s)}</div>`)}
+async function cfVoid(id){const reason=prompt('Reason for voiding '+id+' (required):');if(!reason)return;
+ await cfRun(()=>db.runTransaction(async t=>{
+  const sd=await t.get(cfc('sales').doc(id));if(!sd.exists)throw new Error('Sale not found');const s=sd.data();if(s.status=='void')throw new Error('Already voided');
+  const P=await cfPre(t,s.items.map(i=>i.pid)),cs=s.customerId?await t.get(cfc('customers').doc(s.customerId)):null,rid=P.next();
+  s.items.forEach(i=>{const x=P.S[i.pid];x.qty+=i.qty;x.day.adj=CFN(x.day.adj)+i.qty});
+  const vv={status:'void',voidReason:reason,voidBy:me.name,voidAt:Date.now(),updatedBy:me.uid,updatedAt:Date.now()};
+  t.set(cfc('sales').doc(id),vv,{merge:true});t.set(cfc('fintx').doc(id),vv,{merge:true});
+  cfFx(t,{id:rid,type:'REVERSAL',amount:-s.total,ref:id,refType:'sale',method:s.method,ymd:P.ymd,desc:'Reversal of '+id+': '+reason});
+  if(cs&&cs.exists&&s.balance>0)t.set(cfc('customers').doc(s.customerId),cfUp({owing:Math.max(0,CFN(cs.data().owing)-s.balance)}),{merge:true});
+  cfFlush(t,P);cfAud(t,'VOID_SALE',id,{status:'ok',total:s.total},{status:'void',reason},`${me.name} voided transaction ${id}: ${reason}`)}),'Sale voided and stock restored');
+ await cfAfter('Sale '+id+' was voided');}
+
+// ===================== PRODUCTION =====================
+CFT.prod=async function(){
+ const pr=CF.P.filter(p=>p.status!='Inactive'),td=await cfL('days',['ymd','==',today()]);CF.days=Object.fromEntries(td.map(d=>[d.pid,d]));
+ const recs=(await cfL('production',['ymd','==',today()])).sort((a,b)=>b.at-a.at);
+ cfBody(`<div class="card"><h3>Daily Production Record - ${today()}</h3><p class="mut">Opening stock comes automatically from yesterday's closing. Sold and damaged quantities are filled in by the Sales and Wastage records, so nothing is typed twice.</p>
+ <div class="cfg2">${cfS('pp','Product',pr.map(p=>[p.id,p.name]),'','onchange="$(\'#m_pr\').dataset.t=\'\';cfProdCalc()"')}${cfF('po','Opening quantity','number','','readonly')}${cfF('pn','New quantity produced','number','','oninput="cfProdCalc()"')}${cfF('pa','Total available','number','','readonly')}${cfF('ps','Quantity sold (from sales)','number','','readonly')}${cfF('pw','Damaged / wasted (from wastage)','number','','readonly')}${cfF('pc','Closing quantity','number','','readonly')}${cfF('pq','Unit selling price','text','','readonly')}${cfF('pt','Total sales today','text','','readonly')}${cfF('pf','Production officer','text',me.name)}</div>
+ ${cfF('pnote','Notes','text','')}<label class="cfl"><input type="checkbox" id="m_pr" style="width:auto"> Deduct raw materials using the recipe</label><div id="cfpc" class="mut"></div><button onclick="cfProduce()">Save production</button></div>
+ <div class="card"><h3>Today's production records</h3><table>${cfHead(['Time','Product','Quantity','Cost/unit','Total cost','Officer','Recipe used'])}${recs.map(r=>`<tr><td>${new Date(r.at).toLocaleTimeString()}</td><td>${esc(r.name)}</td><td>${r.qty}</td><td>${money(r.unitCost)}</td><td>${money(r.totalCost)}</td><td>${esc(r.officer)}</td><td>${r.recipeUsed?'Yes':'No'}</td></tr>`).join('')||'<tr><td colspan=7 class="mut">None yet.</td></tr>'}</table></div>`);cfProdCalc()};
+function cfProdCalc(){const id=v('m_pp'),p=CF.P.find(x=>x.id==id);if(!p)return;const d=CF.days[id],st=CFN(CF.stock[id]?.qty),o=d?CFN(d.open):st,n=CFN(v('m_pn')),pr=d?CFN(d.produced):0,so=d?CFN(d.sold):0,w=d?CFN(d.wasted):0,ad=d?CFN(d.adj):0;
+ const set_=(k,x)=>{const e=$('#m_'+k);if(e)e.value=x};set_('po',o);set_('pa',o+pr+n);set_('ps',so);set_('pw',w);set_('pc',o+pr+n-so-w+ad);set_('pq',money(p.price));set_('pt',money(d?CFN(d.revenue):0));
+ const rc=CF.R[id],cb=$('#m_pr');if(cb&&!cb.dataset.t){cb.checked=!!(rc&&rc.items&&rc.items.length&&CF.cfg.autoDeduct&&rc.auto!==false);cb.dataset.t=1}
+ let h='';if(rc&&rc.items&&rc.items.length&&n>0){const c=cfSum(rc.items,i=>{const m=CF.M.find(x=>x.id==i.mid);return m?i.qty*n/rc.batch*CFN(m.unitCost):0});h=`Estimated material cost: <b>${money(c)}</b> (${money(c/n)} each) · Selling price ${money(p.price)} · Est. profit/unit <b>${money(p.price-c/n)}</b> · Est. batch profit <b>${money((p.price-c/n)*n)}</b>`}$('#cfpc').innerHTML=h}
+async function cfProduce(){
+ const pid=v('m_pp'),qty=Math.floor(CFN(v('m_pn'))),pr=CF.P.find(x=>x.id==pid);if(!pr||qty<=0)return cfToast('Choose a product and enter the quantity produced',true);
+ const rc=CF.R[pid],useR=$('#m_pr').checked&&rc&&rc.items&&rc.items.length,officer=v('m_pf')||me.name,note=v('m_pnote');
+ const r=await cfRun(()=>db.runTransaction(async t=>{
+  const P=await cfPre(t,[pid]),s=P.S[pid],used=[];
+  if(useR)for(const it of rc.items){const ms=await t.get(cfc('materials').doc(it.mid));if(!ms.exists)continue;const m=ms.data(),need=cfR2(it.qty*qty/rc.batch);
+   if(need>CFN(m.balance))throw new Error('Not enough '+m.name+': need '+need+' '+m.unit+', only '+m.balance+' in stock');used.push({mid:it.mid,name:m.name,unit:m.unit,need,bal:CFN(m.balance),uc:CFN(m.unitCost),usedSoFar:CFN(m.used)})}
+  const cost=cfR2(cfSum(used,u=>u.need*u.uc)),uc=used.length?cost/qty:s.cost;
+  used.forEach(u=>{const nb=cfR2(u.bal-u.need);t.set(cfc('materials').doc(u.mid),cfUp({balance:nb,used:cfR2(u.usedSoFar+u.need)}),{merge:true});
+   t.set(cfc('matTx').doc(),cst({mid:u.mid,name:u.name,type:'USE',qty:u.need,before:u.bal,after:nb,unitCost:u.uc,ref:'production of '+qty+' '+pr.name,ymd:P.ymd}))});
+  const open=s.day.open;s.avg=(s.qty+qty)>0?(s.qty*s.avg+qty*uc)/(s.qty+qty):uc;s.qty+=qty;s.day.produced=CFN(s.day.produced)+qty;
+  t.set(cfc('production').doc(),cst({pid,name:pr.name,qty,open,avail:s.qty,unitCost:cfR2(uc),totalCost:cfR2(uc*qty),materials:used.map(u=>({name:u.name,qty:u.need,unit:u.unit})),recipeUsed:!!used.length,officer,notes:note,ymd:P.ymd}));
+  cfFlush(t,P);cfAud(t,'PRODUCTION',pid,null,{qty},`${me.name} recorded production of ${qty} ${pr.name}`)}),'Production recorded');
+ if(r)await cfAfter('New production recorded: '+qty+' '+pr.name)}
+
+// ===================== PRODUCT INVENTORY =====================
+CFT.inv=async function(){
+ const[a,b]=cfRng(),days=await cfL('days',['ymd','>=',a],['ymd','<=',b]),td=Object.fromEntries((await cfL('days',['ymd','==',today()])).map(x=>[x.pid,x])),cost=['admin','finance','manager'].includes(CF.role);
+ cfBody(`<div class="card"><h3>Current Product Inventory</h3><table>${cfHead(['Product','Category','Opening today','Produced','Sold','Wasted','In stock','Minimum','Status',...(cost?['Unit cost','Value']:[])])}${CF.P.map(p=>{const s=CF.stock[p.id]||{},d=td[p.id],q=CFN(s.qty),low=CFN(p.min)>0&&q<CFN(p.min);return`<tr><td>${esc(p.name)}</td><td>${esc(p.category||'')}</td><td>${d?d.open:q}</td><td>${d?d.produced:0}</td><td>${d?d.sold:0}</td><td>${d?d.wasted:0}</td><td><b>${q}</b></td><td>${CFN(p.min)}</td><td>${low?'<span class="red">LOW</span>':'OK'}</td>${cost?`<td>${money(s.avgCost)}</td><td>${money(q*CFN(s.avgCost))}</td>`:''}</tr>`}).join('')}</table></div>
+ <div class="card"><h3>Daily stock history</h3>${cfRangeUI()}<table>${cfHead(['Date','Product','Opening','Produced','Sold','Wasted','Adjust','Closing'])}${days.sort((x,y)=>x.ymd<y.ymd?1:-1).map(d=>`<tr><td>${d.ymd}</td><td>${esc(d.name)}</td><td>${d.open}</td><td>${d.produced}</td><td>${d.sold}</td><td>${d.wasted}</td><td>${CFN(d.adj)}</td><td><b>${d.close}</b></td></tr>`).join('')||'<tr><td colspan=8 class="mut">No records in this period.</td></tr>'}</table></div>`)};
+
+// ===================== RAW MATERIALS =====================
+CFT.mat=async function(){
+ const cost=CF.role!='production',can=['admin','manager'].includes(CF.role);
+ cfBody(`<div class="card"><div class="row"><h3 style="flex:1">Raw Material Inventory</h3>${can?'<button onclick="cfMatForm()">+ Add material</button>':''}</div><table>${cfHead(['Item','Category','Unit','Opening','Purchased','Used','Wasted','Balance','Min',...(cost?['Unit cost','Value']:[]),'Supplier','Expiry',''])}${CF.M.map(m=>{const low=CFN(m.min)>0&&m.balance<m.min;return`<tr><td>${esc(m.name)}</td><td>${esc(m.category||'')}</td><td>${esc(m.unit)}</td><td>${CFN(m.opening)}</td><td>${CFN(m.purchased)}</td><td>${CFN(m.used)}</td><td>${CFN(m.wasted)}</td><td><b class="${low?'red':''}">${CFN(m.balance)}</b></td><td>${CFN(m.min)}</td>${cost?`<td>${money(m.unitCost)}</td><td>${money(m.balance*m.unitCost)}</td>`:''}<td>${esc(m.supplier||'')}</td><td>${esc(m.expiry||'')}</td><td>${can?`<button class="g" onclick="cfMatForm('${m.id}')">Edit</button> `:''}<button class="g" onclick="cfMatUse('${m.id}')">Record usage</button></td></tr>`}).join('')||'<tr><td colspan=14 class="mut">No materials yet.</td></tr>'}</table><p class="mut">Balance = Opening + Purchased − Used − Wasted (calculated automatically).</p></div>`)};
+function cfMatForm(id){const m=CF.M.find(x=>x.id==id)||{};
+ cfModal(`<h3>${id?'Edit':'Add'} raw material</h3><div class="cfg2">${cfF('n','Item name','text',m.name)}${cfS('c','Category',MCAT,m.category)}${cfS('u','Unit',MUNIT,m.unit)}${id?'':cfF('o','Opening quantity','number','0')}${cfF('uc','Unit cost (₦)','number',m.unitCost||'')}${cfF('mn','Minimum stock level','number',m.min||'')}${cfF('s','Supplier','text',m.supplier)}${cfF('e','Expiry date','date',m.expiry)}</div><div class="row"><button onclick="cfSaveMat('${id||''}')">Save</button><button class="g" onclick="cfClose()">Cancel</button></div>`)}
+async function cfSaveMat(id){const g=cfG();if(!g.n)return cfToast('Enter the item name',true);
+ await cfRun(async()=>{const b=db.batch(),o={name:g.n,category:g.c,unit:g.u,unitCost:CFN(g.uc),min:CFN(g.mn),supplier:g.s,expiry:g.e};
+  if(id){b.set(cfc('materials').doc(id),cfUp(o),{merge:true});cfAud(b,'MATERIAL_EDIT',id,null,o,`${me.name} edited material ${g.n}`)}
+  else{const ref=cfc('materials').doc(),op=CFN(g.o);b.set(ref,cst({...o,opening:op,purchased:0,used:0,wasted:0,balance:op}));b.set(cfc('matTx').doc(),cst({mid:ref.id,name:g.n,type:'OPENING',qty:op,before:0,after:op,unitCost:o.unitCost,ref:'opening stock',ymd:today()}));cfAud(b,'MATERIAL_ADD',ref.id,null,o,`${me.name} added material ${g.n}`)}
+  await b.commit();cfClose()},'Material saved');await cfInit();cfDraw()}
+async function cfMatUse(id){const m=CF.M.find(x=>x.id==id),q=CFN(prompt('Quantity of '+m.name+' used ('+m.unit+'):'));if(q<=0)return;
+ await cfRun(()=>db.runTransaction(async t=>{const d=await t.get(cfc('materials').doc(id)),x=d.data();if(q>CFN(x.balance))throw new Error('Not enough '+x.name+' in stock');const nb=cfR2(x.balance-q);
+  t.set(cfc('materials').doc(id),cfUp({balance:nb,used:cfR2(CFN(x.used)+q)}),{merge:true});t.set(cfc('matTx').doc(),cst({mid:id,name:x.name,type:'USE',qty:q,before:x.balance,after:nb,unitCost:CFN(x.unitCost),ref:'manual usage',ymd:today()}));cfAud(t,'MATERIAL_USE',id,{balance:x.balance},{balance:nb},`${me.name} used ${q} ${x.unit} of ${x.name}`)}),'Usage recorded');
+ await cfAfter();}
+
+// ===================== PURCHASES =====================
+CFT.pur=async function(){
+ const[a,b]=cfRng(),pu=(await cfL('purchases',['ymd','>=',a],['ymd','<=',b])).sort((x,y)=>y.at-x.at),sup=await cfL('suppliers');
+ cfBody(`<div class="card"><h3>Record Purchase</h3>${CF.M.length?`<datalist id="cfsup">${sup.map(s=>`<option value="${esc(s.name)}">`).join('')}</datalist><div class="cfg2">${cfS('i','Item',CF.M.map(m=>[m.id,m.name+' ('+m.unit+')']),'')}${cfF('s','Supplier','text','','list="cfsup"')}${cfF('q','Quantity','number','','oninput="cfPurCalc()"')}${cfF('p','Unit price (₦)','number','','oninput="cfPurCalc()"')}${cfF('t','Total amount','text','','readonly')}${cfS('m','Payment method',['Cash','Transfer','POS','Credit'],'Cash')}${cfF('inv','Invoice / receipt no.','text','')}${cfF('by','Purchased by','text',me.name)}${cfF('e','Expiry date (optional)','date','')}</div>${cfF('nt','Notes','text','')}<button onclick="cfBuy()">Save purchase</button>`:'<p class="mut">Add raw materials first (Raw Materials tab).</p>'}</div>
+ <div class="card"><h3>Purchase history</h3>${cfRangeUI()}<table>${cfHead(['Date','Supplier','Item','Qty','Unit price','Total','Method','Invoice','By'])}${pu.map(p=>`<tr><td>${p.ymd}</td><td>${esc(p.supplier)}</td><td>${esc(p.name)}</td><td>${p.qty} ${esc(p.unit)}</td><td>${money(p.price)}</td><td>${money(p.total)}</td><td>${esc(p.method)}</td><td>${esc(p.invoice||'')}</td><td>${esc(p.buyer||p.byName)}</td></tr>`).join('')||'<tr><td colspan=9 class="mut">None in this period.</td></tr>'}</table></div>`)};
+function cfPurCalc(){const e=$('#m_t');if(e)e.value=money(CFN(v('m_q'))*CFN(v('m_p')))}
+async function cfBuy(){const g=cfG(),q=CFN(g.q),pc=CFN(g.p),m=CF.M.find(x=>x.id==g.i);if(!m||q<=0||pc<=0||!g.s)return cfToast('Choose item, supplier, quantity and unit price',true);
+ const r=await cfRun(()=>db.runTransaction(async t=>{
+  const P=await cfPre(t,[]),md=await t.get(cfc('materials').doc(m.id)),x=md.data(),tot=cfR2(q*pc),nb=cfR2(CFN(x.balance)+q),id=P.next();
+  t.set(cfc('materials').doc(m.id),cfUp({balance:nb,purchased:cfR2(CFN(x.purchased)+q),unitCost:pc,supplier:g.s,expiry:g.e||x.expiry||''}),{merge:true});
+  t.set(cfc('matTx').doc(),cst({mid:m.id,name:x.name,type:'PURCHASE',qty:q,before:CFN(x.balance),after:nb,unitCost:pc,ref:id,ymd:P.ymd}));
+  t.set(cfc('purchases').doc(id),cst({id,mid:m.id,name:x.name,unit:x.unit,supplier:g.s,qty:q,price:pc,total:tot,method:g.m,invoice:g.inv,buyer:g.by,notes:g.nt,ymd:P.ymd}));
+  t.set(cfc('suppliers').doc(cfSlug(g.s)),{name:g.s,lastPurchase:Date.now(),total:firebase.firestore.FieldValue.increment(tot),updatedBy:me.uid,updatedAt:Date.now(),by:me.uid},{merge:true});
+  cfFx(t,{id:P.next(),type:'PURCHASE',amount:-tot,method:g.m,ref:id,refType:'purchase',ymd:P.ymd,desc:q+' '+x.unit+' '+x.name+' from '+g.s});
+  cfFlush(t,P);cfAud(t,'PURCHASE',id,{balance:x.balance},{balance:nb,total:tot},`${me.name} purchased ${q} ${x.unit} ${x.name} for ${money(tot)}`);return tot}),'Purchase saved');
+ if(r)await cfAfter('Purchase recorded: '+q+' '+m.unit+' '+m.name)}
+
+// ===================== EXPENSES =====================
+CFT.exp=async function(){
+ const yr=today().slice(0,4)+'-01-01',all=await cfL('expenses',['ymd','>=',yr]),ap=all.filter(x=>x.status=='Approved'),[a,b]=cfRng(),lst=all.filter(x=>x.ymd>=a&&x.ymd<=b).sort((x,y)=>y.at-x.at),can=['admin','finance'].includes(CF.role);
+ const sm=f=>money(cfSum(ap.filter(x=>x.ymd>=f),x=>x.amount)),d=new Date(),wk=ld(new Date(d.getFullYear(),d.getMonth(),d.getDate()-(d.getDay()+6)%7)),mo=ld(new Date(d.getFullYear(),d.getMonth(),1));
+ cfBody(`<div class="grid">${cfCard('Daily expenses',sm(today()))}${cfCard('Weekly expenses',sm(wk))}${cfCard('Monthly expenses',sm(mo))}${cfCard('Yearly expenses',sm(yr))}</div>
+ <div class="card"><h3>Record Expense</h3><div class="cfg2">${cfS('c','Category',ECAT,'')}${cfF('d','Description','text','')}${cfF('a','Amount (₦)','number','')}${cfS('m','Payment method',['Cash','Transfer','POS'],'Cash')}${cfF('pt','Paid to','text','')}${cfF('r','Receipt number','text','')}</div>${cfF('n','Notes','text','')}<p class="mut">${can?'Entries by Administrator / Finance are approved immediately.':'Your entry goes to Pending until an Administrator or Finance Officer approves it.'}</p><button onclick="cfSaveExp()">Save expense</button></div>
+ <div class="card"><h3>Expenses</h3>${cfRangeUI()}<table>${cfHead(['Date','Category','Description','Amount','Method','Paid to','Receipt','Recorded by','Status',''])}${lst.map(e=>`<tr><td>${e.ymd}</td><td>${esc(e.category)}</td><td>${esc(e.description)}</td><td>${money(e.amount)}</td><td>${esc(e.method)}</td><td>${esc(e.paidTo||'')}</td><td>${esc(e.receipt||'')}</td><td>${esc(e.byName)}</td><td>${e.status=='Approved'?'<span class="green">Approved</span>':e.status=='Rejected'?'<span class="red">Rejected</span>':'Pending'}</td><td>${can&&e.status=='Pending'?`<button onclick="cfApprove('${e.id}',true)">Approve</button> <button class="s" onclick="cfApprove('${e.id}',false)">Reject</button>`:''}</td></tr>`).join('')||'<tr><td colspan=10 class="mut">None in this period.</td></tr>'}</table></div>`)};
+async function cfSaveExp(){const g=cfG(),amt=CFN(g.a);if(!g.d||amt<=0)return cfToast('Enter description and amount',true);const can=['admin','finance'].includes(CF.role);
+ const r=await cfRun(()=>db.runTransaction(async t=>{
+  const P=await cfPre(t,[]),ref=cfc('expenses').doc(),o={category:g.c,description:g.d,amount:amt,method:g.m,paidTo:g.pt,receipt:g.r,notes:g.n,ymd:P.ymd,status:can?'Approved':'Pending'};
+  t.set(ref,cst(o));if(can)cfFx(t,{id:P.next(),type:'EXPENSE',amount:-amt,method:g.m,ref:ref.id,refType:'expense',ymd:P.ymd,desc:g.c+': '+g.d});
+  cfFlush(t,P);cfAud(t,'EXPENSE',ref.id,null,o,`${me.name} recorded ${money(amt)} expense (${g.c})`)}),'Expense saved');
+ if(r)await cfAfter(can?null:money(amt)+' expense submitted for approval')}
+async function cfApprove(id,yes){
+ await cfRun(()=>db.runTransaction(async t=>{
+  const P=await cfPre(t,[]),d=await t.get(cfc('expenses').doc(id)),e=d.data();if(e.status!='Pending')throw new Error('Already '+e.status);
+  t.set(cfc('expenses').doc(id),cfUp({status:yes?'Approved':'Rejected',approvedBy:me.name,approvedAt:Date.now()}),{merge:true});
+  if(yes)cfFx(t,{id:P.next(),type:'EXPENSE',amount:-e.amount,method:e.method,ref:id,refType:'expense',ymd:P.ymd,expYmd:e.ymd,desc:e.category+': '+e.description});
+  cfFlush(t,P);cfAud(t,yes?'EXPENSE_APPROVE':'EXPENSE_REJECT',id,{status:'Pending'},{status:yes?'Approved':'Rejected'},`${me.name} ${yes?'approved':'rejected'} ${money(e.amount)} expense`)}),yes?'Expense approved':'Expense rejected');
+ await cfAfter();}
+
+// ===================== WASTAGE =====================
+CFT.waste=async function(){
+ const[a,b]=cfRng(),w=(await cfL('wastage',['ymd','>=',a],['ymd','<=',b])).sort((x,y)=>y.at-x.at),pr=CF.P.filter(p=>p.status!='Inactive'),mg=['admin','manager'].includes(CF.role);
+ cfBody(`<div class="card"><h3>Record Damaged / Wasted Items</h3><div class="cfg2">${cfS('k','Type',[['product','Product'],['material','Raw material']],'product','onchange="cfWasteType()"')}<div id="cfwi"></div>${cfF('q','Quantity','number','')}${cfS('r','Reason',WR,'')}</div>${cfF('n','Notes','text','')}<button onclick="cfWaste()">Save wastage</button></div>
+ <div class="card"><h3>Wastage records</h3>${cfRangeUI()}<table>${cfHead(['Date','Type','Item','Qty','Reason','Cost','Staff','Approval',''])}${w.map(x=>`<tr><td>${x.ymd}</td><td>${esc(x.kind)}</td><td>${esc(x.name)}</td><td>${x.qty}</td><td>${esc(x.reason)}</td><td>${money(x.cost)}</td><td>${esc(x.byName)}</td><td>${esc(x.approval)}</td><td>${mg&&x.approval!='Approved'?`<button onclick="cfWApprove('${x.id}')">Approve</button>`:''}</td></tr>`).join('')||'<tr><td colspan=9 class="mut">None in this period.</td></tr>'}</table></div>`);cfWasteType()};
+function cfWasteType(){const k=v('m_k'),e=$('#cfwi');if(e)e.innerHTML=cfS('i','Item',k=='product'?CF.P.filter(p=>p.status!='Inactive').map(p=>[p.id,p.name]):CF.M.map(m=>[m.id,m.name+' ('+m.unit+')']),'')}
+async function cfWaste(){const g=cfG(),q=CFN(g.q);if(!g.i||q<=0)return cfToast('Choose an item and quantity',true);const prod=g.k=='product',appr=['admin','manager'].includes(CF.role)?'Approved':'Pending';
+ const r=await cfRun(()=>db.runTransaction(async t=>{
+  const P=await cfPre(t,prod?[g.i]:[]);let name,cost,unit='';
+  if(prod){const s=P.S[g.i];if(q>s.qty)throw new Error('Only '+s.qty+' '+s.name+' in stock');name=s.name;cost=cfR2(q*(s.avg||s.cost));s.qty-=q;s.day.wasted=CFN(s.day.wasted)+q}
+  else{const md=await t.get(cfc('materials').doc(g.i)),x=md.data();if(q>CFN(x.balance))throw new Error('Only '+x.balance+' '+x.unit+' in stock');name=x.name;unit=x.unit;cost=cfR2(q*CFN(x.unitCost));const nb=cfR2(x.balance-q);
+   t.set(cfc('materials').doc(g.i),cfUp({balance:nb,wasted:cfR2(CFN(x.wasted)+q)}),{merge:true});t.set(cfc('matTx').doc(),cst({mid:g.i,name,type:'WASTE',qty:q,before:x.balance,after:nb,unitCost:CFN(x.unitCost),ref:g.r,ymd:P.ymd}))}
+  t.set(cfc('wastage').doc(),cst({kind:g.k,itemId:g.i,name,qty:q,unit,reason:g.r,notes:g.n,cost,approval:appr,ymd:P.ymd}));
+  cfFlush(t,P);cfAud(t,'WASTAGE',g.i,null,{qty:q,reason:g.r},`${me.name} recorded wastage of ${q} ${name} (${g.r})`)}),'Wastage recorded');
+ if(r)await cfAfter('Wastage recorded: '+q+' '+g.r)}
+async function cfWApprove(id){await cfRun(async()=>{const b=db.batch();b.set(cfc('wastage').doc(id),cfUp({approval:'Approved',approvedBy:me.name}),{merge:true});cfAud(b,'WASTAGE_APPROVE',id,null,null,`${me.name} approved wastage ${id}`);await b.commit()},'Approved');cfDraw()}
+
+// ===================== CUSTOMERS =====================
+CFT.cust=async function(){
+ const pay=(await cfL('payments')).sort((a,b)=>b.at-a.at).slice(0,30);
+ cfBody(`<div class="card"><div class="row"><h3 style="flex:1">Customers</h3><button onclick="cfCustForm()">+ Add customer</button></div><table>${cfHead(['Name','Phone','Owes',''])}${CF.C.map(c=>`<tr><td>${esc(c.name)}</td><td>${esc(c.phone||'')}</td><td class="${CFN(c.owing)>0?'red':''}">${money(c.owing)}</td><td>${CFN(c.owing)>0?`<button onclick="cfPayForm('${c.id}')">Receive payment</button>`:''}</td></tr>`).join('')||'<tr><td colspan=4 class="mut">No customers yet.</td></tr>'}</table></div>
+ <div class="card"><h3>Recent customer payments</h3><table>${cfHead(['Date','Customer','Amount','Method','Received by'])}${pay.map(p=>`<tr><td>${new Date(p.at).toLocaleString()}</td><td>${esc(p.customerName)}</td><td>${money(p.amount)}</td><td>${esc(p.method)}</td><td>${esc(p.byName)}</td></tr>`).join('')||'<tr><td colspan=5 class="mut">None.</td></tr>'}</table></div>`)};
+function cfCustForm(){cfModal(`<h3>Add customer</h3>${cfF('n','Name','text','')}${cfF('p','Phone','text','')}<div class="row"><button onclick="cfSaveCust()">Save</button><button class="g" onclick="cfClose()">Cancel</button></div>`)}
+async function cfSaveCust(){const g=cfG();if(!g.n)return cfToast('Enter a name',true);await cfRun(async()=>{const b=db.batch(),r=cfc('customers').doc();b.set(r,cst({name:g.n,phone:g.p,owing:0}));cfAud(b,'CUSTOMER_ADD',r.id,null,{name:g.n},`${me.name} added customer ${g.n}`);await b.commit();cfClose()},'Customer saved');await cfInit();cfDraw()}
+function cfPayForm(id){const c=CF.C.find(x=>x.id==id);cfModal(`<h3>Payment from ${esc(c.name)}</h3><p>Owes <b>${money(c.owing)}</b></p>${cfF('a','Amount','number',c.owing)}${cfS('m','Method',['Cash','Transfer','POS'],'Cash')}<div class="row"><button onclick="cfPay('${id}')">Save payment</button><button class="g" onclick="cfClose()">Cancel</button></div>`)}
+async function cfPay(id){const g=cfG(),amt=CFN(g.a);if(amt<=0)return cfToast('Enter an amount',true);
+ const r=await cfRun(()=>db.runTransaction(async t=>{const P=await cfPre(t,[]),cd=await t.get(cfc('customers').doc(id)),c=cd.data();if(amt>CFN(c.owing))throw new Error('Payment is more than the balance owed ('+money(c.owing)+')');const tid=P.next();
+  t.set(cfc('customers').doc(id),cfUp({owing:CFN(c.owing)-amt}),{merge:true});t.set(cfc('payments').doc(tid),cst({id:tid,customerId:id,customerName:c.name,amount:amt,method:g.m,ymd:P.ymd}));
+  cfFx(t,{id:tid,type:'PAYMENT',amount:amt,method:g.m,ref:id,refType:'customer',ymd:P.ymd,desc:'Payment from '+c.name});cfFlush(t,P);cfAud(t,'PAYMENT',id,{owing:c.owing},{owing:CFN(c.owing)-amt},`${me.name} received ${money(amt)} from ${c.name}`)}),'Payment recorded');
+ if(r){cfClose();await cfAfter('Payment received: '+money(amt))}}
+
+// ===================== PROFIT & LOSS + REPORTS =====================
+async function cfPL(a,b){
+ const[s,e,w,p,py]=await Promise.all([cfL('sales',['ymd','>=',a],['ymd','<=',b]),cfL('expenses',['ymd','>=',a],['ymd','<=',b]),cfL('wastage',['ymd','>=',a],['ymd','<=',b]),cfL('purchases',['ymd','>=',a],['ymd','<=',b]),cfL('payments',['ymd','>=',a],['ymd','<=',b])]);
+ const ok=s.filter(x=>x.status=='ok'),ex=e.filter(x=>x.status=='Approved'),rev=cfSum(ok,x=>x.total),cg=cfSum(ok,x=>x.cogs),wc=cfSum(w,x=>x.cost),eo=cfSum(ex,x=>x.amount),cat={};
+ ex.forEach(x=>cat[x.category]=(cat[x.category]||0)+CFN(x.amount));
+ return{ok,ex,rev,cg,wc,eo,cat,gross:rev-cg,net:rev-cg-wc-eo,buy:cfSum(p,x=>x.total),cash:cfSum(ok,x=>x.paid)+cfSum(py,x=>x.amount),credit:cfSum(ok,x=>x.balance)}}
+CFT.pl=async function(){
+ const[a,b]=cfRng(),r=await cfPL(a,b),ds=[];for(let t=new Date(a+'T12:00:00');ld(t)<=b&&ds.length<62;t.setDate(t.getDate()+1))ds.push(ld(t));
+ cfBody(`<div class="card"><h3>Profit & Loss</h3>${cfRangeUI()}<p class="mut">${a} to ${b}</p>
+ <table><tr><td>Total Sales (Revenue)</td><td><b>${money(r.rev)}</b></td></tr><tr><td>Cost of goods sold (production / material cost of items sold)</td><td>${money(r.cg)}</td></tr><tr><td><b>Gross profit</b></td><td><b>${money(r.gross)}</b></td></tr><tr><td>Wastage cost</td><td>${money(r.wc)}</td></tr>${Object.entries(r.cat).map(([k,x])=>`<tr><td>Expense: ${esc(k)}</td><td>${money(x)}</td></tr>`).join('')}<tr><td>Total operating expenses</td><td>${money(r.eo)}</td></tr><tr><td><b>NET PROFIT</b></td><td><b class="${r.net<0?'red':'green'}">${money(r.net)}</b></td></tr></table>
+ <p class="mut">Net profit = Revenue − Cost of goods sold − Wastage − Approved expenses. Raw-material purchases (${money(r.buy)} in this period) are NOT subtracted again, because their cost flows through Cost of goods sold. Cash received (sales + customer payments): ${money(r.cash)} · Credit given: ${money(r.credit)}.</p></div>`+(ds.length>1?cfBars('Revenue per day',ds.map(d=>d.slice(5)),ds.map(d=>cfSum(r.ok.filter(x=>x.ymd==d),x=>x.total)))+cfBars('Profit per day',ds.map(d=>d.slice(5)),ds.map(d=>cfSum(r.ok.filter(x=>x.ymd==d),x=>x.total-x.cogs)-cfSum(r.ex.filter(x=>x.ymd==d),x=>x.amount))):''))};
+CFT.rep=async function(){
+ const k=CF.repk||'prod',kinds=[['prod','Production Report'],['sales','Sales Report'],['inv','Inventory Report'],['mat','Raw Material Report']].concat(['admin','finance'].includes(CF.role)?[['exp','Expense Report'],['fin','Financial Report']]:[]);
+ cfBody(`<div class="card"><h3>Reports</h3><div class="row">${kinds.map(([x,l])=>`<button class="${x==k?'':'g'}" onclick="CF.repk='${x}';cfDraw()">${l}</button>`).join('')}</div><div style="margin-top:10px">${cfRangeUI()}</div><div id="cfrep">Loading...</div></div>`);
+ const[a,b]=cfRng(),R=await cfReport(k,a,b);CF.rep=R;
+ $('#cfrep').innerHTML=`<h4>${R.title} (${a} to ${b})</h4><div class="row" style="margin-bottom:8px"><button class="g" onclick="saveCSV('confectionery-${k}-${a}-to-${b}.csv',[CF.rep.head,...CF.rep.rows])">⬇ Excel / CSV</button><button class="g" onclick="cfPrintHTML(CF.rep.title+' ${a} to ${b}',document.getElementById('cfrt').outerHTML)">🖨 Print / Save as PDF</button></div><table id="cfrt">${cfHead(R.head)}${R.rows.map(r=>'<tr>'+r.map(c=>`<td>${typeof c=='number'?c.toLocaleString():esc(c)}</td>`).join('')+'</tr>').join('')||'<tr><td class="mut">No data in this period.</td></tr>'}</table>`};
+async function cfReport(k,a,b){
+ if(k=='prod'||k=='inv'){const d=(await cfL('days',['ymd','>=',a],['ymd','<=',b])).sort((x,y)=>x.ymd>y.ymd?1:-1),g={};
+  d.forEach(x=>{const r=g[x.pid]||(g[x.pid]={n:x.name,o:CFN(x.open),p:0,s:0,w:0,a:0,c:0});r.p+=CFN(x.produced);r.s+=CFN(x.sold);r.w+=CFN(x.wasted);r.a+=CFN(x.adj);r.c=CFN(x.close)});
+  return{title:k=='prod'?'Production Report':'Inventory Report',head:['Product','Opening','Produced','Sold','Damaged','Adjustments','Closing'],rows:Object.values(g).map(r=>[r.n,r.o,r.p,r.s,r.w,r.a,r.c])}}
+ if(k=='sales'){const s=(await cfL('sales',['ymd','>=',a],['ymd','<=',b])).filter(x=>x.status=='ok'),g={};s.forEach(x=>x.items.forEach(i=>{const r=g[i.name]||(g[i.name]={q:0,t:0});r.q+=i.qty;r.t+=i.total}));
+  return{title:'Sales Report',head:['Product','Quantity','Average price','Total'],rows:Object.entries(g).map(([n,r])=>[n,r.q,cfR2(r.t/r.q),r.t]).concat([['TOTAL',cfSum(Object.values(g),r=>r.q),'',cfSum(Object.values(g),r=>r.t)]])}}
+ if(k=='mat'){const t=(await cfL('matTx',['ymd','>=',a],['ymd','<=',b])).sort((x,y)=>x.at-y.at),g={};
+  CF.M.forEach(m=>g[m.id]={n:m.name,o:CFN(m.balance),p:0,u:0,w:0,c:CFN(m.balance),f:1});
+  t.forEach(x=>{const r=g[x.mid];if(!r)return;if(r.f){r.o=CFN(x.before);r.f=0}if(x.type=='PURCHASE')r.p+=x.qty;if(x.type=='USE')r.u+=x.qty;if(x.type=='WASTE')r.w+=x.qty;if(x.type=='OPENING')r.o=CFN(x.qty);r.c=CFN(x.after)});
+  return{title:'Raw Material Report',head:['Item','Opening','Purchased','Used','Wasted','Balance'],rows:Object.values(g).map(r=>[r.n,cfR2(r.o),cfR2(r.p),cfR2(r.u),cfR2(r.w),cfR2(r.c)])}}
+ if(k=='exp'){const e=(await cfL('expenses',['ymd','>=',a],['ymd','<=',b])).sort((x,y)=>x.at-y.at);return{title:'Expense Report',head:['Date','Category','Description','Amount','Status','Staff'],rows:e.map(x=>[x.ymd,x.category,x.description,CFN(x.amount),x.status,x.byName])}}
+ const r=await cfPL(a,b);return{title:'Financial Report',head:['Item','Amount'],rows:[['Revenue',r.rev],['Cost of goods sold',r.cg],['Gross profit',r.gross],['Wastage cost',r.wc],['Operating expenses',r.eo],['Net profit',r.net],['Materials purchased (info)',r.buy],['Cash received',r.cash],['Credit given',r.credit]]}}
+
+// ===================== DAILY CLOSING =====================
+CFT.close=async function(){
+ const y=today(),[cl,days,sales,exps,pay,cust,past]=await Promise.all([cfc('closings').doc(y).get(),cfL('days',['ymd','==',y]),cfL('sales',['ymd','==',y]),cfL('expenses',['ymd','==',y]),cfL('payments',['ymd','==',y]),cfL('customers'),cfL('closings')]);
+ const ok=sales.filter(s=>s.status=='ok'),me_=m=>cfSum(ok.filter(s=>s.method==m),s=>s.paid)+cfSum(pay.filter(p=>p.method==m),p=>p.amount),show=['admin','finance'].includes(CF.role);
+ const snap={ymd:y,rows:days.map(d=>({name:d.name,open:CFN(d.open),prod:CFN(d.produced),adj:CFN(d.adj),sold:CFN(d.sold),wasted:CFN(d.wasted),close:CFN(d.close)})),totalSales:cfSum(ok,s=>s.total),expenses:cfSum(exps.filter(e=>e.status=='Approved'),e=>e.amount),cash:me_('Cash'),transfer:me_('Transfer'),pos:me_('POS'),credit:cfSum(ok,s=>s.balance),outstanding:cfSum(cust,c=>c.owing)};
+ CF.snap=snap;const tbl=s=>`<table>${cfHead(['Product','Opening','+ Production','± Adjust','− Sales','− Wastage','= Closing'])}${s.rows.map(r=>`<tr><td>${esc(r.name)}</td><td>${r.open}</td><td>${r.prod}</td><td>${r.adj}</td><td>${r.sold}</td><td>${r.wasted}</td><td><b>${r.close}</b></td></tr>`).join('')||'<tr><td colspan=7 class="mut">No activity.</td></tr>'}</table><div class="grid">${cfCard('Total sales',money(s.totalSales))}${cfCard('Total expenses',money(s.expenses))}${cfCard('Cash received',money(s.cash))}${cfCard('Transfer',money(s.transfer))}${cfCard('POS',money(s.pos))}${cfCard('Credit sales',money(s.credit))}${cfCard('Outstanding balance',money(s.outstanding))}</div>`;
+ cfBody(`<div class="card"><h3>Daily Confectionery Closing - ${y}</h3>${cl.exists?`<p class="green">✔ Closed by ${esc(cl.data().closedBy)} at ${new Date(cl.data().at).toLocaleString()}. Ordinary staff can no longer post to this day.</p>${tbl(cl.data())}${CF.role=='admin'?'<button class="s" onclick="cfReopen()">Reopen day (administrator)</button>':''}`:`${tbl(snap)}<button onclick="cfCloseDay()">🔒 Close the day</button>`}</div>
+ <div class="card"><h3>Previous closings</h3><table>${cfHead(['Date','Sales','Expenses','Closed by'])}${past.sort((a,b)=>a.ymd<b.ymd?1:-1).slice(0,30).map(c=>`<tr><td>${c.ymd}</td><td>${money(c.totalSales)}</td><td>${money(c.expenses)}</td><td>${esc(c.closedBy)}</td></tr>`).join('')||'<tr><td colspan=4 class="mut">None yet.</td></tr>'}</table></div>`)};
+async function cfCloseDay(){if(!confirm('Close today? Ordinary staff will no longer be able to record anything for today.'))return;
+ await cfRun(async()=>{const b=db.batch(),s=CF.snap;b.set(cfc('closings').doc(s.ymd),cst({...s,closedBy:me.name}));cfAud(b,'DAY_CLOSE',s.ymd,null,{sales:s.totalSales},`${me.name} closed confectionery day ${s.ymd}`);await b.commit()},'Day closed');await cfAfter('Daily confectionery closing completed')}
+async function cfReopen(){if(!confirm('Reopen today?'))return;await cfRun(async()=>{const b=db.batch();b.delete(cfc('closings').doc(today()));cfAud(b,'DAY_REOPEN',today(),null,null,`${me.name} reopened confectionery day ${today()}`);await b.commit()},'Day reopened');cfDraw()}
+
+// ===================== PRODUCT MANAGEMENT (admin) =====================
+CFT.prods=async function(){
+ cfBody(`<div class="card"><div class="row"><h3 style="flex:1">Product Management</h3><button onclick="cfProdForm()">+ ADD PRODUCT</button></div><table>${cfHead(['','Name','Category','SKU','Price','Prod. cost','Unit','Min stock','Status','Added',''])}${CF.P.map(p=>`<tr><td>${p.image?`<img class="cfth" src="${esc(p.image)}">`:''}</td><td>${esc(p.name)}</td><td>${esc(p.category||'')}</td><td>${esc(p.sku||'')}</td><td><b>${money(p.price)}</b></td><td>${money(p.cost)}</td><td>${esc(p.unit||'')}</td><td>${CFN(p.min)}</td><td>${esc(p.status||'Active')}</td><td>${p.addedAt?ld(p.addedAt):''}</td><td><button class="g" onclick="cfProdForm('${p.id}')">Edit</button> <button class="g" onclick="cfToggleProd('${p.id}')">${p.status=='Inactive'?'Activate':'Deactivate'}</button></td></tr>`).join('')||'<tr><td colspan=11 class="mut">No products yet. Tap + ADD PRODUCT (e.g. Bread, Meat Pie, Doughnut, Sausage Roll, Cake, Small Chops, Chin Chin, Egg Roll, Puff Puff).</td></tr>'}</table></div>`)};
+function cfProdForm(id){const p=CF.P.find(x=>x.id==id)||{};CF.img='';
+ cfModal(`<h3>${id?'Edit':'Add'} product</h3><div class="cfg2">${cfF('n','Product name','text',p.name)}${cfS('c','Category',PCAT,p.category)}${cfF('sk','Code / SKU','text',p.sku)}${cfF('pr','Selling price (₦)','number',p.price)}${cfF('co','Production cost (₦)','number',p.cost)}${cfS('u','Unit',PUNIT,p.unit)}${cfF('mn','Minimum stock level','number',p.min)}${cfS('st','Status',['Active','Inactive'],p.status||'Active')}</div><label class="cfl">Product image<input type="file" accept="image/*" onchange="cfImg(this)"></label><div class="row"><button onclick="cfSaveProd('${id||''}')">Save</button><button class="g" onclick="cfClose()">Cancel</button></div>`)}
+function cfImg(i){const f=i.files[0];if(!f)return;const im=new Image();im.onload=()=>{const c=document.createElement('canvas');c.width=c.height=160;const m=Math.min(im.width,im.height);c.getContext('2d').drawImage(im,(im.width-m)/2,(im.height-m)/2,m,m,0,0,160,160);CF.img=c.toDataURL('image/jpeg',.75)};im.src=URL.createObjectURL(f)}
+async function cfSaveProd(id){const g=cfG();if(!g.n||CFN(g.pr)<=0)return cfToast('Name and selling price are required',true);
+ const o={name:g.n,category:g.c,sku:g.sk,price:CFN(g.pr),cost:CFN(g.co),unit:g.u,min:CFN(g.mn),status:g.st};if(CF.img)o.image=CF.img;
+ await cfRun(async()=>{const b=db.batch(),old=CF.P.find(x=>x.id==id);
+  if(id){b.set(cfc('products').doc(id),cfUp(o),{merge:true});
+   if(CFN(old.price)!=o.price)cfAud(b,'PRICE_CHANGE',id,{price:old.price},{price:o.price},`${me.name} changed ${o.name} price from ${money(old.price)} to ${money(o.price)}`);
+   else cfAud(b,'PRODUCT_EDIT',id,null,o,`${me.name} edited product ${o.name}`)}
+  else{const r=cfc('products').doc();b.set(r,cst({...o,addedAt:Date.now()}));b.set(cfc('stock').doc(r.id),{qty:0,avgCost:o.cost,name:o.name,createdBy:me.uid,updatedBy:me.uid,updatedAt:Date.now(),by:me.uid});cfAud(b,'PRODUCT_ADD',r.id,null,o,`${me.name} added product ${o.name} at ${money(o.price)}`)}
+  await b.commit();cfClose()},'Product saved');await cfInit();cfDraw()}
+async function cfToggleProd(id){const p=CF.P.find(x=>x.id==id),s=p.status=='Inactive'?'Active':'Inactive';
+ await cfRun(async()=>{const b=db.batch();b.set(cfc('products').doc(id),cfUp({status:s}),{merge:true});cfAud(b,'PRODUCT_STATUS',id,{status:p.status},{status:s},`${me.name} set ${p.name} to ${s}`);await b.commit()},'Updated');await cfInit();cfDraw()}
+
+// ===================== RECIPES (admin) =====================
+CFT.rec=async function(){
+ const pr=CF.P;cfBody(`<div class="card"><h3>Production formula settings</h3><label class="cfl"><input type="checkbox" id="m_ad" style="width:auto" ${CF.cfg.autoDeduct?'checked':''} onchange="cfAutoDed(this.checked)"> Deduct raw materials automatically when production is recorded (default for all recipes)</label></div>
+ <div class="card"><h3>Product Recipes</h3>${pr.map(p=>{const r=CF.R[p.id],c=r?cfSum(r.items||[],i=>{const m=CF.M.find(x=>x.id==i.mid);return m?i.qty*CFN(m.unitCost):0}):0;return`<div class="cfp" style="margin-bottom:10px"><div class="row"><h4 style="flex:1">${esc(p.name)}</h4><button class="g" onclick="cfRecForm('${p.id}')">${r?'Edit recipe':'Set recipe'}</button></div>${r&&r.items&&r.items.length?`<p class="mut">Batch: ${r.batch} ${esc(p.unit||'')}</p><p>${r.items.map(i=>esc(i.name)+': '+i.qty+' '+esc(i.unit)).join(' · ')}</p><p><span>Material cost per batch</span><b>${money(c)}</b></p><p><span>Cost per ${esc(p.unit||'unit')}</span><b>${money(c/r.batch)}</b></p><p><span>Selling price</span><b>${money(p.price)}</b></p><p><span>Est. profit per unit / per batch</span><b>${money(p.price-c/r.batch)} / ${money((p.price-c/r.batch)*r.batch)}</b></p>`:'<p class="mut">No recipe set.</p>'}</div>`}).join('')||'<p class="mut">Add products first.</p>'}</div>`)};
+async function cfAutoDed(x){await cfRun(async()=>{await cfc('settings').doc('main').set({autoDeduct:x,updatedBy:me.uid,updatedAt:Date.now()},{merge:true});CF.cfg.autoDeduct=x},'Setting saved')}
+function cfRecForm(id){const p=CF.P.find(x=>x.id==id),r=CF.R[id]||{batch:100,items:[]},rows=(r.items&&r.items.length?r.items:[{}]);CF.recRows=rows.length;
+ cfModal(`<h3>Recipe: ${esc(p.name)}</h3>${cfF('b','Production batch (number of units this recipe makes)','number',r.batch)}<div id="cfri">${rows.map((it,k)=>cfRecRow(k,it)).join('')}</div><button class="g" onclick="cfRecAdd()">+ ingredient</button><label class="cfl"><input type="checkbox" id="m_au" style="width:auto" ${r.auto!==false?'checked':''}> Deduct automatically for this product</label><div class="row"><button onclick="cfSaveRec('${id}')">Save recipe</button><button class="g" onclick="cfClose()">Cancel</button></div>`)}
+const cfRecRow=(k,it)=>`<div class="row">${cfS('mi'+k,'Material',[['','-'],...CF.M.map(m=>[m.id,m.name+' ('+m.unit+')'])],it.mid||'')}${cfF('mq'+k,'Quantity','number',it.qty||'')}</div>`;
+function cfRecAdd(){const k=CF.recRows++;$('#cfri').insertAdjacentHTML('beforeend',cfRecRow(k,{}))}
+async function cfSaveRec(id){const g=cfG(),items=[];for(let k=0;k<CF.recRows;k++){const m=CF.M.find(x=>x.id==g['mi'+k]),q=CFN(g['mq'+k]);if(m&&q>0)items.push({mid:m.id,name:m.name,unit:m.unit,qty:q})}
+ if(CFN(g.b)<=0)return cfToast('Enter the batch size',true);
+ await cfRun(async()=>{const b=db.batch(),o={pid:id,batch:CFN(g.b),items,auto:g.au};b.set(cfc('recipes').doc(id),cst(o));cfAud(b,'RECIPE_SAVE',id,CF.R[id]||null,o,`${me.name} saved recipe for ${CF.P.find(x=>x.id==id).name}`);await b.commit();cfClose()},'Recipe saved');await cfInit();cfDraw()}
+
+// ===================== AUDIT / STAFF ACCESS / MY TRANSACTIONS =====================
+CFT.audit=async function(){
+ const a=(await cfc('audit').orderBy('at','desc').limit(300).get()).docs.map(d=>d.data());CF.aud=a;
+ cfBody(`<div class="card"><div class="row"><h3 style="flex:1">Audit Trail (latest 300)</h3><button class="g" onclick="saveCSV('confectionery-audit.csv',[['Date','Time','User','Action','Record','Old','New','Details'],...CF.aud.map(x=>[x.ymd,x.time,x.user,x.action,x.ref,x.old,x.new,x.text])])">⬇ CSV</button></div><input placeholder="Search..." oninput="const q=this.value.toLowerCase();document.querySelectorAll('#cfat tr[data-s]').forEach(r=>r.style.display=r.dataset.s.includes(q)?'':'none')"><table id="cfat">${cfHead(['Date','Time','User','Action','Details','Old','New'])}${a.map(x=>`<tr data-s="${esc((x.user+x.action+x.text+x.ref).toLowerCase())}"><td>${x.ymd}</td><td>${esc(x.time)}</td><td>${esc(x.user)}</td><td>${esc(x.action)}</td><td>${esc(x.text)}</td><td>${esc(x.old)}</td><td>${esc(x.new)}</td></tr>`).join('')}</table></div>`)};
+CFT.staff=async function(){
+ const[st,pm]=await Promise.all([list('staff',['role','==','confectionery']),cfL('perms')]),pp=Object.fromEntries(pm.map(x=>[x.id,x.cfRole]));
+ cfBody(`<div class="card"><h3>Confectionery Staff Access</h3><p class="mut">Staff whose portal role is "Confectionery" get one of these confectionery roles. Administrators (Proprietor, Admin, Chairman, School Administrator) have full access; Accountants are Finance Officers; Principal is treated as Confectionery Manager. Staff with no role set below are treated as Managers.</p><table>${cfHead(['Staff','Username','Confectionery role'])}${st.map(s=>`<tr><td>${esc(s.name)}</td><td>${esc(s.username||s.staffId||'')}</td><td><select onchange="cfSetRole('${s.id}',this.value,'${esc(s.name).replace(/'/g,'')}')">${[['manager','Confectionery Manager'],['production','Production Staff'],['cashier','Cashier']].map(([k,l])=>`<option value="${k}" ${(pp[s.id]||'manager')==k?'selected':''}>${l}</option>`).join('')}</select></td></tr>`).join('')||'<tr><td colspan=3 class="mut">No staff with the Confectionery role yet. Create them in Staff & Roles.</td></tr>'}</table></div>`)};
+async function cfSetRole(uid,r,n){await cfRun(async()=>{const b=db.batch();b.set(cfc('perms').doc(uid),{cfRole:r,updatedBy:me.uid,updatedAt:Date.now()});cfAud(b,'STAFF_ROLE',uid,null,{role:r},`${me.name} set ${n} as ${r}`);await b.commit()},'Role saved')}
+CFT.mine=async function(){
+ const q=[['by','==',me.uid]],[s,p,w,pu,e]=await Promise.all([cfL('sales',...q),cfL('production',...q),cfL('wastage',...q),cfL('purchases',...q),cfL('expenses',...q)]);
+ const rows=[...s.map(x=>({at:x.at,t:'Sale',d:x.id+': '+x.items.map(i=>i.qty+' '+i.name).join(', '),a:x.total})),...p.map(x=>({at:x.at,t:'Production',d:x.qty+' '+x.name,a:''})),...w.map(x=>({at:x.at,t:'Wastage',d:x.qty+' '+x.name+' ('+x.reason+')',a:x.cost})),...pu.map(x=>({at:x.at,t:'Purchase',d:x.qty+' '+x.unit+' '+x.name,a:x.total})),...e.map(x=>({at:x.at,t:'Expense',d:x.category+': '+x.description,a:x.amount}))].sort((a,b)=>b.at-a.at).slice(0,150);
+ cfBody(`<div class="card"><h3>My Transactions</h3><table>${cfHead(['Date / time','Type','Details','Amount'])}${rows.map(r=>`<tr><td>${new Date(r.at).toLocaleString()}</td><td>${r.t}</td><td>${esc(r.d)}</td><td>${r.a===''?'':money(r.a)}</td></tr>`).join('')||'<tr><td colspan=4 class="mut">Nothing recorded by you yet.</td></tr>'}</table></div>`)};
+// ===================== END UPDATE 5 =====================
+
+
 
 </script></body></html>
