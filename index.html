@@ -1032,7 +1032,7 @@ function setPhoto(kind,id,inp){const f=inp.files[0];if(!f)return;const im=new Im
  im.onload=async()=>{const c=document.createElement('canvas');c.width=c.height=240;const m=Math.min(im.width,im.height);c.getContext('2d').drawImage(im,(im.width-m)/2,(im.height-m)/2,m,m,0,0,240,240);
   try{const ref=db.doc((kind=='staff'?'staff/':'students/')+id),d={photo:c.toDataURL('image/jpeg',.8)};await(kind=='staff'?ref.set(d,{merge:true}):ref.update(d));kind=='staff'?go('dash'):studentDash(id,'pf')}catch(e){alert('Could not save photo: '+(e.code||e.message))}};
  im.src=URL.createObjectURL(f)}
-const photoBtn=(k,id)=>`<label class="pbtn">📷 Change photo<input type="file" accept="image/*" hidden onchange="setPhoto('${k}','${esc(id)}',this)"></label>`;
+const photoBtn=(k,id)=>!TOP.includes(me.role)?'':`<label class="pbtn">📷 Change photo<input type="file" accept="image/*" hidden onchange="setPhoto('${k}','${esc(id)}',this)"></label>`;
 {const o=stTab;stTab=function(k){o(k);if(k!='ov')return;const s=STF.s||{},nm=s.name||me.name||'';
  $('#sdt').insertAdjacentHTML('afterbegin',`<div class="pban">${s.photo?`<img class="ph" src="${esc(s.photo)}" alt="">`:`<div class="ph" style="display:grid;place-items:center;font-size:44px;background:var(--bd)">${esc((nm||'?')[0])}</div>`}<div><h2>${esc(nm)}</h2><span class="ch">${esc(s.position||RL[me.role]||me.role)}</span><span class="ch">${esc(s.staffId||me.username||'')}</span><span class="ch">${esc(s.campus||'')}</span><br>${photoBtn('staff',me.uid)}</div></div>`)}}
 
@@ -1163,7 +1163,7 @@ function ttPrint(){const w=window.open('');if(!w)return alert('Allow pop-ups.');
 .cfbars i{width:100%;background:var(--pri);border-radius:4px 4px 0 0;min-height:2px}.cfbars small{font-size:10px;color:var(--mut)}
 .cfw{border-left:4px solid var(--bad);background:var(--bg);padding:10px 12px;border-radius:10px;margin-bottom:8px;font-size:14px}
 .cfp{border:1px solid var(--bd);border-radius:14px;padding:12px}.cfp h4{margin:0 0 8px}.cfp p{margin:3px 0;display:flex;justify-content:space-between;font-size:14px}
-.cfth{width:44px;height:44px;border-radius:8px;object-fit:cover;background:var(--bd)}`;document.head.appendChild(st)}
+.cfs{overflow:auto;max-height:min(62vh,460px);border:1px solid var(--bd);border-radius:10px;-webkit-overflow-scrolling:touch}.cfs table{min-width:620px;margin:0}.cfs th{position:sticky;top:0;background:var(--card);z-index:2}.cfs th,.cfs td{white-space:nowrap}.cfth{width:44px;height:44px;border-radius:8px;object-fit:cover;background:var(--bd)}`;document.head.appendChild(st)}
 
 const CF={tab:'dash',role:'',P:[],M:[],R:{},stock:{},C:[],cfg:{autoDeduct:true},rng:'month',from:'',to:'',cart:[],key:'',busy:false,live:false,img:'',rep:null};
 const CFT={};
@@ -1172,12 +1172,12 @@ const CAP={admin:'dash,sales,prod,inv,mat,pur,exp,waste,cust,rep,pl,close,prods,
  manager:'dash,sales,prod,inv,mat,pur,exp,waste,cust,rep,close,mine',
  production:'dash,prod,inv,mat,waste,mine',
  cashier:'dash,sales,cust,mine'};
-const CFTABS=[['dash','📊 Dashboard'],['sales','🧾 Record Sales'],['prod','🏭 Record Production'],['inv','📦 Product Inventory'],['mat','🧂 Raw Materials'],['pur','🛒 Purchases'],['exp','💸 Expenses'],['waste','🗑 Wastage'],['cust','👥 Customers'],['rep','📑 Reports'],['pl','💰 Profit & Loss'],['close','🔒 Daily Closing'],['prods','🏷 Products'],['rec','📖 Recipes'],['audit','🕵 Audit Trail'],['staff','🔑 Staff Access'],['mine','👤 My Transactions']];
+const CFTABS=[['dash','📊 Dashboard'],['sales','🧾 Record Sales'],['prod','🏭 Record Production'],['inv','📦 Product Inventory'],['mat','🧂 Raw Materials'],['pur','🛒 Purchases'],['exp','💸 Expenses'],['waste','🗑 Wastage'],['cust','👥 Customers'],['rep','📑 Reports'],['pl','💰 Profit & Loss'],['close','🔒 Daily Closing'],['prods','🏷 Products'],['rec','📖 Recipes'],['audit','🕵 Audit Trail'],['staff','🔑 Staff Access'],['mine','👤 My Transactions'],['reset','⚠️ Reset (Owner)']];
 const PCAT=['Bread','Pastry','Cake','Snack','Drink','Other'],PUNIT=['piece','loaf','pack','dozen','kg','bag','litre'],
  MCAT=['Flour & Grains','Sweeteners','Fats & Oils','Dairy & Eggs','Meat','Vegetables & Spices','Packaging','Other'],MUNIT=['kg','g','bag','litre','ml','piece','carton','crate','pack','roll'],
  ECAT=['Electricity','Gas','Fuel','Transportation','Repairs','Equipment','Packaging','Maintenance','Cleaning materials','Staff-related','Raw materials','Miscellaneous'],
  WR=['Burnt','Damaged','Expired','Returned','Spoilt','Production error'],PAYM=['Cash','Transfer','POS','Credit'];
-const CFN=n=>+n||0,cfR2=n=>Math.round((+n||0)*100)/100,cfc=n=>db.collection('cf_'+n),cfOn=k=>(CAP[CF.role]||'').split(',').includes(k);
+const CFN=n=>+n||0,cfR2=n=>Math.round((+n||0)*100)/100,cfc=n=>db.collection('cf_'+n),CF_OWNER=['proprietor'],cfOn=k=>k=='reset'?CF_OWNER.includes(me.role):(CAP[CF.role]||'').split(',').includes(k);
 const cfSum=(a,f)=>a.reduce((s,x)=>s+CFN(f(x)),0);
 const cst=o=>({...o,by:me.uid,byName:me.name,at:Date.now(),createdBy:me.uid,createdAt:Date.now(),updatedBy:me.uid,updatedAt:Date.now()});
 const cfUp=o=>({...o,updatedBy:me.uid,updatedAt:Date.now(),by:me.uid});
@@ -1191,7 +1191,8 @@ function cfClose(){const m=$('#cfm');if(m)m.style.display='none'}
 const cfG=()=>Object.fromEntries([...document.querySelectorAll('[id^=m_]')].map(e=>[e.id.slice(2),e.type=='checkbox'?e.checked:e.value.trim()]));
 const cfF=(id,l,t,val,x)=>`<label class="cfl">${l}<input id="m_${id}" type="${t||'text'}" value="${esc(val??'')}" ${x||''}></label>`;
 const cfS=(id,l,arr,val,x)=>`<label class="cfl">${l}<select id="m_${id}" ${x||''}>${arr.map(o=>{const[a,b]=Array.isArray(o)?o:[o,o];return`<option value="${esc(a)}" ${a==val?'selected':''}>${esc(b)}</option>`}).join('')}</select></label>`;
-const cfBody=h=>{const e=$('#cfb');if(e)e.innerHTML=h};
+const cfWrap=e=>{if(!e)return;e.querySelectorAll('table').forEach(x=>{if(x.parentElement.classList.contains('cfs'))return;const d=document.createElement('div');d.className='cfs';x.parentNode.insertBefore(d,x);d.appendChild(x)})};
+const cfBody=h=>{const e=$('#cfb');if(e){e.innerHTML=h;cfWrap(e)}};
 const cfCard=(l,x)=>`<div class="card stat"><b>${x}</b><span>${l}</span></div>`;
 const cfBars=(t,labs,vals)=>{const mx=Math.max(1,...vals);return`<div class="card"><h4>${t}</h4><div class="cfbars">${vals.map((x,i)=>`<div title="${esc(labs[i])}: ${cfR2(x)}"><i style="height:${Math.round(Math.max(x,0)/mx*100)}%"></i><small>${esc(labs[i])}</small></div>`).join('')}</div></div>`};
 const cfHead=(a)=>'<tr>'+a.map(x=>`<th>${x}</th>`).join('')+'</tr>';
@@ -1234,7 +1235,8 @@ function cfRng(){const d=new Date(),y=d.getFullYear(),m=d.getMonth(),dd=d.getDat
  if(k=='week')return[ld(new Date(y,m,dd-(d.getDay()+6)%7)),today()];if(k=='month')return[ld(new Date(y,m,1)),today()];
  if(k=='last')return[ld(new Date(y,m-1,1)),ld(new Date(y,m,0))];if(k=='year')return[y+'-01-01',today()];
  return[CF.from||today(),CF.to||today()]}
-const cfRangeUI=()=>`<div class="row" style="margin-bottom:10px"><select onchange="CF.rng=this.value;cfDraw()">${[['today','Today'],['yest','Yesterday'],['week','This Week'],['month','This Month'],['last','Last Month'],['year','This Year'],['custom','Custom Range']].map(([k,l])=>`<option value="${k}" ${CF.rng==k?'selected':''}>${l}</option>`).join('')}</select>${CF.rng=='custom'?`<input type="date" value="${CF.from}" onchange="CF.from=this.value"><input type="date" value="${CF.to}" onchange="CF.to=this.value;cfDraw()">`:''}</div>`;
+const cfRangeUI=()=>{const[a,b]=cfRng();return`<div class="row" style="margin-bottom:10px;align-items:flex-end"><label class="cfl">Quick filter<select onchange="CF.rng=this.value;cfDraw()">${[['today','Today'],['yest','Yesterday'],['week','This Week'],['month','This Month'],['last','Last Month'],['year','This Year'],['custom','Custom Range']].map(([k,l])=>`<option value="${k}" ${CF.rng==k?'selected':''}>${l}</option>`).join('')}</select></label><label class="cfl">From<input type="date" id="rf" value="${a}"></label><label class="cfl">To<input type="date" id="rt" value="${b}"></label><button onclick="cfApplyRange()">Apply filter</button></div>`};
+function cfApplyRange(){const f=$('#rf').value,e=$('#rt').value;if(!f||!e||f>e)return cfToast('Choose a valid From and To date',true);CF.rng='custom';CF.from=f;CF.to=e;cfDraw()}
 function cfPrintHTML(title,html){const w=window.open('');if(!w)return alert('Allow pop-ups to print.');w.document.write(`<body style="font-family:Arial;padding:24px"><img src="${esc(new URL(LOGO_URL,location.href).href)}" width=70><h2>Divine Seeds International Eket - ${esc(title)}</h2><p>Printed ${new Date().toLocaleString()} by ${esc(me.name)}</p>${html}<style>table{border-collapse:collapse;width:100%;font-size:13px}td,th{border:1px solid #999;padding:5px;text-align:left}</style><script>print()<\/script>`)}
 
 // ===================== DASHBOARD =====================
@@ -1256,8 +1258,8 @@ CFT.dash=async function(){
  if(adm)h+=cfCard("Today's Expenses",money(ex))+cfCard('Estimated Profit (today)',`<span class="${rev-cg-wc-ex<0?'red':'green'}">${money(rev-cg-wc-ex)}</span>`);
  if(CF.role!='cashier')h+=cfCard('Raw Materials Remaining',CF.M.length+' items'+(mon?' · '+money(matVal):''));
  h+='</div>';
- if(lowM.length||lowP.length)h+=`<div class="card"><h3>⚠️ Low Stock Alerts</h3>${lowP.map(r=>`<div class="cfw"><b>${esc(r.p.name.toUpperCase())} LOW STOCK</b><br>Current: ${r.left} · Minimum: ${r.p.min} · Recommended production: ${Math.max(r.p.min-r.left,0)}</div>`).join('')}${lowM.map(m=>`<div class="cfw"><b>${esc(m.name.toUpperCase())} LOW STOCK</b><br>Current: ${m.balance} ${esc(m.unit)} · Minimum: ${m.min} ${esc(m.unit)} · Recommended purchase: ${cfR2(m.min-m.balance)} ${esc(m.unit)}</div>`).join('')}</div>`;
- h+=`<div class="grid">${R.map(r=>`<div class="cfp"><h4>${esc(r.p.name.toUpperCase())}</h4><p><span>Opening</span><b>${r.open}</b></p><p><span>Produced</span><b>${r.pr}</b></p><p><span>Available</span><b>${r.open+r.pr}</b></p><p><span>Sold</span><b>${r.so}</b></p><p><span>Wasted</span><b>${r.w}</b></p><p><span>Remaining</span><b class="${CFN(r.p.min)>0&&r.left<CFN(r.p.min)?'red':'green'}">${r.left}</b></p></div>`).join('')||'<div class="card mut">No products yet. An administrator can add them in the Products tab.</div>'}</div>`;
+ if(lowM.length||lowP.length)h+=`<div class="card"><h3>⚠️ Low Stock Alerts</h3><div class="cfs" style="padding:8px;max-height:300px">${lowP.map(r=>`<div class="cfw"><b>${esc(r.p.name.toUpperCase())} LOW STOCK</b><br>Current: ${r.left} · Minimum: ${r.p.min} · Recommended production: ${Math.max(r.p.min-r.left,0)}</div>`).join('')}${lowM.map(m=>`<div class="cfw"><b>${esc(m.name.toUpperCase())} LOW STOCK</b><br>Current: ${m.balance} ${esc(m.unit)} · Minimum: ${m.min} ${esc(m.unit)} · Recommended purchase: ${cfR2(m.min-m.balance)} ${esc(m.unit)}</div>`).join('')}</div></div>`;
+ h+=`<div class="cfs" style="padding:8px;margin-bottom:12px;max-height:380px"><div class="grid">${R.map(r=>`<div class="cfp"><h4>${esc(r.p.name.toUpperCase())}</h4><p><span>Opening</span><b>${r.open}</b></p><p><span>Produced</span><b>${r.pr}</b></p><p><span>Available</span><b>${r.open+r.pr}</b></p><p><span>Sold</span><b>${r.so}</b></p><p><span>Wasted</span><b>${r.w}</b></p><p><span>Remaining</span><b class="${CFN(r.p.min)>0&&r.left<CFN(r.p.min)?'red':'green'}">${r.left}</b></p></div>`).join('')||'<div class="card mut">No products yet. An administrator can add them in the Products tab.</div>'}</div></div>`;
  if(adm){
   const pend=exps.filter(x=>x.status=='Pending'),owe=cfSum(cust,c=>c.owing),mo=ld(new Date(new Date().getFullYear(),new Date().getMonth(),1)),top={};
   ok.filter(x=>x.ymd>=mo).forEach(s=>s.items.forEach(i=>top[i.name]=(top[i.name]||0)+i.qty));
@@ -1469,7 +1471,7 @@ CFT.pl=async function(){
 CFT.rep=async function(){
  const k=CF.repk||'prod',kinds=[['prod','Production Report'],['sales','Sales Report'],['inv','Inventory Report'],['mat','Raw Material Report']].concat(['admin','finance'].includes(CF.role)?[['exp','Expense Report'],['fin','Financial Report']]:[]);
  cfBody(`<div class="card"><h3>Reports</h3><div class="row">${kinds.map(([x,l])=>`<button class="${x==k?'':'g'}" onclick="CF.repk='${x}';cfDraw()">${l}</button>`).join('')}</div><div style="margin-top:10px">${cfRangeUI()}</div><div id="cfrep">Loading...</div></div>`);
- const[a,b]=cfRng(),R=await cfReport(k,a,b);CF.rep=R;
+ const[a,b]=cfRng(),R=await cfReport(k,a,b);CF.rep=R;setTimeout(()=>cfWrap($('#cfrep')),0);
  $('#cfrep').innerHTML=`<h4>${R.title} (${a} to ${b})</h4><div class="row" style="margin-bottom:8px"><button class="g" onclick="saveCSV('confectionery-${k}-${a}-to-${b}.csv',[CF.rep.head,...CF.rep.rows])">⬇ Excel / CSV</button><button class="g" onclick="cfPrintHTML(CF.rep.title+' ${a} to ${b}',document.getElementById('cfrt').outerHTML)">🖨 Print / Save as PDF</button></div><table id="cfrt">${cfHead(R.head)}${R.rows.map(r=>'<tr>'+r.map(c=>`<td>${typeof c=='number'?c.toLocaleString():esc(c)}</td>`).join('')+'</tr>').join('')||'<tr><td class="mut">No data in this period.</td></tr>'}</table>`};
 async function cfReport(k,a,b){
  if(k=='prod'||k=='inv'){const d=(await cfL('days',['ymd','>=',a],['ymd','<=',b])).sort((x,y)=>x.ymd>y.ymd?1:-1),g={};
@@ -1539,6 +1541,76 @@ CFT.mine=async function(){
  const rows=[...s.map(x=>({at:x.at,t:'Sale',d:x.id+': '+x.items.map(i=>i.qty+' '+i.name).join(', '),a:x.total})),...p.map(x=>({at:x.at,t:'Production',d:x.qty+' '+x.name,a:''})),...w.map(x=>({at:x.at,t:'Wastage',d:x.qty+' '+x.name+' ('+x.reason+')',a:x.cost})),...pu.map(x=>({at:x.at,t:'Purchase',d:x.qty+' '+x.unit+' '+x.name,a:x.total})),...e.map(x=>({at:x.at,t:'Expense',d:x.category+': '+x.description,a:x.amount}))].sort((a,b)=>b.at-a.at).slice(0,150);
  cfBody(`<div class="card"><h3>My Transactions</h3><table>${cfHead(['Date / time','Type','Details','Amount'])}${rows.map(r=>`<tr><td>${new Date(r.at).toLocaleString()}</td><td>${r.t}</td><td>${esc(r.d)}</td><td>${r.a===''?'':money(r.a)}</td></tr>`).join('')||'<tr><td colspan=4 class="mut">Nothing recorded by you yet.</td></tr>'}</table></div>`)};
 // ===================== END UPDATE 5 =====================
+
+// ===================== UPDATE 6 : OWNER RESET + LIVE MESSAGE NOTIFICATIONS =====================
+// ---------- Owner-only reset of confectionery data ----------
+const CF_RESET=[
+ ['sales','Sales, receipts and financial ledger (sales, transactions, customer payments)',['sales','fintx','payments','keys']],
+ ['prod','Production records and daily stock history',['production','days']],
+ ['stock','Product stock quantities (set every product to 0)','ZERO'],
+ ['mat','Raw materials and material movements',['materials','matTx']],
+ ['pur','Purchases and suppliers',['purchases','suppliers']],
+ ['exp','Expenses',['expenses']],
+ ['waste','Wastage records',['wastage']],
+ ['cust','Customers and their balances',['customers']],
+ ['close','Daily closings',['closings']],
+ ['audit','Audit trail',['audit']],
+ ['notes','Activity notifications',['notes']],
+ ['prods','Products, product stock and recipes (removes the product list)',['products','stock','recipes']]];
+CFT.reset=async function(){
+ if(!CF_OWNER.includes(me.role))return cfBody('<div class="card">Not allowed.</div>');
+ cfBody(`<div class="card"><h3>⚠️ Reset Confectionery Data (Owner only)</h3><p class="mut">Tick the sections you want to erase. Erasing is permanent. Each section only clears its own records, so reset related sections together (for example Sales + Production + Stock) to keep figures consistent. Staff roles and settings are never reset.</p>
+ <label class="cfl"><input type="checkbox" style="width:auto" onchange="document.querySelectorAll('.cfrs').forEach(c=>c.checked=this.checked)"> <b>Select ALL (full reset)</b></label>
+ ${CF_RESET.map(r=>`<label class="cfl"><input type="checkbox" class="cfrs" value="${r[0]}" style="width:auto"> ${esc(r[1])}</label>`).join('')}
+ <div class="row" style="margin-top:10px"><button class="s" onclick="cfResetAsk()">Reset selected…</button></div></div>`)};
+function cfResetAsk(){const sel=[...document.querySelectorAll('.cfrs:checked')].map(x=>x.value);if(!sel.length)return cfToast('Tick at least one section',true);CF.rsel=sel;
+ cfModal(`<h3 class="red">Confirm reset</h3><p>You are about to permanently erase:</p><ul>${sel.map(k=>`<li>${esc(CF_RESET.find(r=>r[0]==k)[1])}</li>`).join('')}</ul><p>Type <b>RESET</b> to continue:</p><input id="m_rc" placeholder="RESET"><div class="row" style="margin-top:10px"><button class="s" onclick="cfResetGo()">Erase now</button><button class="g" onclick="cfClose()">Cancel</button></div>`)}
+async function cfWipe(c){let n=0;for(;;){const s=await cfc(c).limit(400).get();if(s.empty)break;const b=db.batch();s.docs.forEach(d=>b.delete(d.ref));await b.commit();n+=s.size}return n}
+async function cfResetGo(){
+ if(v('m_rc')!=='RESET')return cfToast('Type RESET exactly (capital letters)',true);if(!CF_OWNER.includes(me.role))return;const sel=CF.rsel||[];
+ await cfRun(async()=>{const cols=[];let zero=false;
+  sel.forEach(k=>{const r=CF_RESET.find(x=>x[0]==k);if(r[2]=='ZERO')zero=true;else r[2].forEach(c=>{if(!cols.includes(c))cols.push(c)})});
+  if(sel.length==CF_RESET.length)cols.push('counters');
+  let n=0;for(const c of cols)n+=await cfWipe(c);
+  if(zero&&!cols.includes('stock')){const s=await cfc('stock').get();for(let i=0;i<s.docs.length;i+=400){const b=db.batch();s.docs.slice(i,i+400).forEach(d=>b.set(d.ref,{qty:0,updatedAt:Date.now(),updatedBy:me.uid,by:me.uid},{merge:true}));await b.commit()}}
+  const b=db.batch();cfAud(b,'RESET',sel.join(','),null,{sections:sel,deleted:n},`${me.name} reset confectionery data: ${sel.join(', ')}`);await b.commit();cfClose()},'Reset complete');
+ await cfInit();cfDraw()}
+
+// ---------- Live "new message" notifications (banner + sound + browser notification + tab counter) ----------
+{const st=document.createElement('style');st.textContent=`
+#ntb{position:fixed;top:calc(10px + env(safe-area-inset-top,0px));left:50%;transform:translate(-50%,-160%);transition:transform .35s;z-index:300;width:min(440px,94vw);background:var(--card);color:var(--tx);border:1px solid var(--bd);border-left:5px solid var(--gold);border-radius:14px;box-shadow:0 10px 36px #0006;padding:12px 14px;cursor:pointer;display:flex;gap:10px;align-items:flex-start}
+#ntb.on{transform:translate(-50%,0)}#ntb i{font-style:normal;font-size:26px}#ntb b{display:block;font-size:14px}#ntb span{display:block;font-size:13px;color:var(--mut);margin-top:2px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+#ntp{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(14px + env(safe-area-inset-bottom,0px));z-index:250;width:min(440px,94vw);background:var(--card);color:var(--tx);border:1px solid var(--bd);border-radius:14px;box-shadow:0 10px 36px #0006;padding:12px 14px}`;document.head.appendChild(st)}
+const NT={base:document.title,unsubs:[],timer:null,reg:null};
+function ntBeep(){try{const a=new(window.AudioContext||window.webkitAudioContext)(),o=a.createOscillator(),g=a.createGain();o.connect(g);g.connect(a.destination);o.type='sine';o.frequency.value=880;g.gain.setValueAtTime(.15,a.currentTime);g.gain.exponentialRampToValueAtTime(.001,a.currentTime+.45);o.start();o.stop(a.currentTime+.45)}catch(e){}}
+function ntOpen(){try{window.focus()}catch(e){}if(me)go('msg')}
+function ntBanner(t,x){let b=$('#ntb');if(!b){b=document.createElement('div');b.id='ntb';document.body.appendChild(b)}
+ b.innerHTML=`<i>💬</i><div><b>${esc(t)}</b><span>${esc(x)}</span></div>`;b.onclick=()=>{b.classList.remove('on');ntOpen()};
+ requestAnimationFrame(()=>requestAnimationFrame(()=>b.classList.add('on')));clearTimeout(NT.timer);NT.timer=setTimeout(()=>b.classList.remove('on'),8000)}
+async function ntSys(t,x){try{if(!('Notification' in window)||Notification.permission!=='granted')return;
+ const o={body:x,icon:LOGO_URL,tag:'ds-msg',renotify:true};
+ if(NT.reg)await NT.reg.showNotification(t,o);else{const n=new Notification(t,o);n.onclick=()=>{ntOpen();n.close()}}}catch(e){console.warn('notification',e)}}
+function ntAlert(t,x){ntBeep();ntBanner(t,x);if(document.hidden)ntSys(t,x);try{navigator.vibrate&&navigator.vibrate([150,80,150])}catch(e){}badge()}
+function ntStop(){NT.unsubs.forEach(u=>{try{u()}catch(e){}});NT.unsubs=[];const b=$('#ntb');if(b)b.classList.remove('on')}
+function ntAsk(){try{if(!('Notification' in window)||Notification.permission!=='default'||localStorage.getItem('ntNo')==me.uid||$('#ntp'))return}catch(e){return}
+ const d=document.createElement('div');d.id='ntp';d.innerHTML='<b>🔔 Turn on notifications</b><p class="mut" style="margin:4px 0 8px">Get an alert whenever you receive a new message.</p><div class="row"><button id="ntyes">Turn on</button><button class="g" id="ntno">Not now</button></div>';document.body.appendChild(d);
+ $('#ntyes').onclick=async()=>{d.remove();try{await Notification.requestPermission()}catch(e){}};$('#ntno').onclick=()=>{d.remove();try{localStorage.setItem('ntNo',me.uid)}catch(e){}}}
+function ntStart(){ntStop();if(!me)return;const mg=MG.includes(me.role),err=e=>console.warn('notify',e.code);
+ try{if('serviceWorker' in navigator&&location.protocol=='https:'&&!/google/.test(location.host)){navigator.serviceWorker.register('sw.js').then(()=>navigator.serviceWorker.ready).then(r=>{NT.reg=r}).catch(()=>{});navigator.serviceWorker.addEventListener('message',e=>{if(e.data&&e.data.open)ntOpen()})}}catch(e){}
+ let f1=true;
+ NT.unsubs.push((mg?db.collection('messages').where('mgmt','==',false):db.collection('messages').where('thread','==',me.uid)).onSnapshot(s=>{
+  if(f1){f1=false;return}
+  s.docChanges().forEach(c=>{if(c.type!='added')return;const m=c.doc.data();if(m.by==me.uid||!!m.mgmt==mg)return;
+   ntAlert(m.mgmt?'New message from School Management':'New message from '+(m.threadName||m.byName||'a user'),m.text||'')})},err));
+ if(!mg){let f2=true;NT.unsubs.push(db.collection('announcements').where('audience','==',me.role=='student'?'students':'staff').onSnapshot(s=>{
+  if(f2){f2=false;return}
+  s.docChanges().forEach(c=>{if(c.type!='added')return;const m=c.doc.data();if(m.by==me.uid)return;ntAlert('New announcement: '+(m.title||''),m.body||'')})},err))}
+ setTimeout(ntAsk,2500)}
+{const o=badge;badge=async function(){await o();document.title=(BN?'('+BN+') ':'')+NT.base}}
+{const o=enter;enter=async function(u){await o(u);if(auth.currentUser&&me)ntStart()}}
+auth.onAuthStateChanged(u=>{if(!u)ntStop()});
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&me)badge()});
+// ===================== END UPDATE 6 =====================
 
 
 
