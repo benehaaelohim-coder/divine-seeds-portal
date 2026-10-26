@@ -235,7 +235,7 @@ function disableBio(){bioSet(me.uid,null);$('#lockBtn').style.display='none';V.a
 
 // ---------- Helpers ----------
 const add=(c,o)=>db.collection(c).add({...o,by:me.uid,byName:me.name,at:Date.now()});
-const list=async(c,...f)=>{let q=db.collection(c);f.forEach(x=>q=q.where(...x));return(await q.get()).docs.map(d=>({id:d.id,...d.data()}))};
+const list=async(c,...f)=>{let q=db.collection(c);f.forEach(x=>q=q.where(...x));const sc=CAMPUS_SCOPE();if(c==='students'&&sc)q=q.where('campus','==',sc);let r=(await q.get()).docs.map(d=>({id:d.id,...d.data()}));if(sc)r=await scFilter(c,r,sc);return r};
 const notify=m=>add('notifications',{msg:m,to:MG});
 const set=h=>mainEl.innerHTML=h;
 const opts=a=>a.map(x=>`<option>${esc(x)}</option>`).join('');
@@ -1621,6 +1621,189 @@ function ntStart(){ntStop();if(!me)return;const mg=MG.includes(me.role),err=e=>c
 auth.onAuthStateChanged(u=>{if(!u)ntStop()});
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&me)badge()});
 // ===================== END UPDATE 6 =====================
+
+// ===================== UPDATE 7 =====================
+let MYC='',UNN=0,ACT=0,NOPUSH=false,SCC={t:0,p:null};
+const PAYTYPES=['Tuition','School Uniform','Stationery','Books','Boarding','Transport','School Bus','Exam','Other'];
+
+// ---------- A. Campus scope ----------
+function CAMPUS_SCOPE(){
+ if(!me||!MYC)return'';
+ const c=CUSTOM.find(r=>r.id===me.role);
+ return(me.role==='teacher'||me.role==='principal'||(c&&c.level==='mgt'))?MYC:''}
+function scIds(sc){
+ if(!SCC.p||Date.now()-SCC.t>20000){SCC.t=Date.now();SCC.p=db.collection('students').where('campus','==',sc).get().then(s=>new Set(s.docs.map(d=>d.id)))}
+ return SCC.p}
+async function scFilter(c,r,sc){
+ if(c==='results'||c==='fees'||c==='comments'){const ids=await scIds(sc);return r.filter(x=>ids.has(x.studentId))}
+ if(c==='attendance'){const ids=await scIds(sc);return r.filter(x=>x.kind!=='student'||ids.has(x.uid))}
+ return r}
+{const o=enter;enter=async function(u){
+ try{const d=await db.doc('staff/'+u.uid).get();MYC=d.exists?(d.data().campus||''):''}catch(e){MYC=''}
+ SCC={t:0,p:null};
+ await o(u);
+ if(auth.currentUser&&me&&!side.querySelector('[data-k="myn"]'))side.insertAdjacentHTML('beforeend','<a data-k="myn" onclick="go(\'myn\')">🔔 My Notifications</a>')}}
+
+// ---------- B. Scroll tables ----------
+{const st=document.createElement('style');st.textContent=`
+.tsc{max-height:min(65vh,520px);overflow:auto;border:1px solid var(--bd);border-radius:10px;-webkit-overflow-scrolling:touch;margin:6px 0}
+.tsc>table{display:table;min-width:100%;overflow:visible;margin:0}
+.tsc th{position:sticky;top:0;background:var(--card);z-index:2}
+.pl{align-items:center}`;document.head.appendChild(st)}
+function tscWrap(root){root.querySelectorAll('table').forEach(t=>{if(t.closest('.tsc,.cfs,#cfb,.tt'))return;const w=document.createElement('div');w.className='tsc';t.parentNode.insertBefore(w,t);w.appendChild(t)})}
+new MutationObserver(()=>tscWrap(mainEl)).observe(mainEl,{childList:true,subtree:true});
+
+// ---------- C. Student registration: School Bus (optional) ----------
+EF.push(['schoolBus','School Bus (Optional)','Yes,No'],['busStop','Bus stop / route']);
+{const o=profHTML;profHTML=function(){const s=SD.s;return o()+`<div class="card"><h4>🚌 School Bus (Optional)</h4><div class="pf"><div><span>Uses school bus</span><b>${esc(s.schoolBus||'-')}</b></div><div><span>Bus stop / route</span><b>${esc(s.busStop||'-')}</b></div></div></div>`}}
+{const o=V.reg;V.reg=function(){o();
+ const b=document.getElementById('f_boarding');
+ if(b)b.insertAdjacentHTML('afterend',F([['schoolBus','School Bus (Optional)','Yes,No'],['busStop','Bus stop / route (if using school bus)']]));
+ const c=document.getElementById('f_campus'),sc=CAMPUS_SCOPE();
+ if(c&&sc){c.value=sc;c.disabled=true}}}
+async function nextReg(){
+ const ref=db.doc('settings/counters');let seed=null;
+ const cur=await ref.get();
+ if(!cur.exists||!(+cur.data().reg>0)){
+  try{const s=await db.collection('students').get();let mx=s.size;s.docs.forEach(d=>{const m=String(d.data().regNo||'').match(/(\d+)$/);if(m)mx=Math.max(mx,+m[1])});seed=mx}
+  catch(e){throw new Error('Registration numbers are not set up yet. Ask the Proprietor, Admin, Chairman or School Administrator to open Registration and register one student first.')}}
+ return db.runTransaction(async t=>{const d=await t.get(ref);let n=d.exists?(+d.data().reg||0):0;if(!n&&seed!=null)n=seed;n++;t.set(ref,{reg:n},{merge:true});return n})}
+async function regStudent(){
+ const g=G(),m=$('#rmsg'),sc=CAMPUS_SCOPE();
+ if(!g.surname||!g.firstName){m.textContent='Enter surname and first name.';return}
+ if(!g.class){m.textContent='Choose the student\'s class.';return}
+ if(!g.campus){m.textContent='Choose the campus.';return}
+ if(!g.guardianEmail){m.textContent='Parent email is required so the parent can set and recover the password.';return}
+ if(sc&&g.campus!==sc){m.textContent='You can only register students for your own campus ('+sc+').';return}
+ let n;try{n=await nextReg()}catch(e){m.textContent=e.message||('Could not get a registration number: '+e.code);return}
+ const reg='DSIS/'+new Date().getFullYear()+'/'+String(n).padStart(4,'0'),un=reg.replace(/\//g,'').toLowerCase();
+ try{
+  const uid=await mkUser(un,'Seeds'+Math.floor(100000+Math.random()*900000),{role:'student',name:g.firstName+' '+g.surname},g.guardianEmail);
+  await db.doc('students/'+uid).set({...g,feeDue:+g.feeDue||0,regNo:reg,username:un,photo,fpEnrolled:FP.t.filter(Boolean).length>0,status:'Active',registered:Date.now()});await fpSave(uid,'student');
+  await notify('New student registered: '+g.firstName+' '+g.surname+' ('+g.campus+')');
+  m.innerHTML=`Done. Username: <b>${un}</b>. A link to set the password was emailed to ${esc(g.guardianEmail)}.`+aliasNote(g.guardianEmail,mkUser.last);
+ }catch(e){console.error(e);m.textContent='Could not register: '+(e.code||e.message)}}
+
+// ---------- D. Staff & Roles: campus per staff member ----------
+{const o=V.staffreg;V.staffreg=async function(){await o();
+ const h=[...mainEl.querySelectorAll('h3')].find(x=>x.textContent.startsWith('All staff'));if(!h)return;
+ const s=(await list('staff')).sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+ h.closest('.card').innerHTML=`<h3>All staff (${s.length})</h3><table><tr><th>Name</th><th>ID</th><th>Role</th><th>Position</th><th>Campus</th><th></th></tr>${s.map(x=>`<tr><td>${esc(x.name)}</td><td>${esc(x.staffId||'')}</td><td>${esc(RL[x.role]||x.role||'')}</td><td>${esc(x.position||'')}</td><td><select id="sc_${esc(x.id)}" style="min-width:120px"><option value="">-- not set --</option>${['Ediam','Ikot Oso'].map(c=>`<option ${c==x.campus?'selected':''}>${c}</option>`).join('')}</select></td><td><button class="g" data-id="${esc(x.id)}" onclick="saveStaffCampus(this.dataset.id)">Save campus</button>${DEL.includes(me.role)&&x.id!==me.uid?` <button class="s" data-id="${esc(x.id)}" onclick="delPerson('staff',this.dataset.id)">Delete</button>`:''}</td></tr>`).join('')}</table><p class="mut">Teachers, Principals and Vice Principals only see students of the campus set here. It applies the next time they sign in.</p>`}}
+async function saveStaffCampus(id){
+ try{await db.doc('staff/'+id).set({campus:v('sc_'+id)},{merge:true});alert('Campus saved. It applies the next time this person signs in.')}
+ catch(e){alert('Could not save: '+(e.code||e.message))}}
+
+// ---------- E. Fees & Payments: several items in one payment ----------
+{const o=V.fees;V.fees=async function(){await o();
+ const h=[...mainEl.querySelectorAll('h3')].find(x=>x.textContent==='Record Payment');if(!h)return;
+ h.closest('.card').innerHTML=`<h3>Record Payment</h3><select id="fee_s" onchange="feeInfo()"><option value="">Select student</option>${FEE.st.map(s=>`<option value="${s.id}">${esc(s.surname)} ${esc(s.firstName)} (${esc(s.regNo)}) - ${esc(s.class)}</option>`).join('')}</select><p id="fee_info"></p>
+ <p class="mut">Add one line for each item the parent is paying for (for example Tuition + School Uniform + Stationery). All lines are saved together under one receipt.</p>
+ <div id="pl_rows"></div><button type="button" class="g" onclick="plAdd()">+ Add another item</button>
+ <p>Total being paid: <b id="pl_tot">₦0</b></p>
+ <div class="row"><select id="fee_m">${opts(['Cash','Bank transfer','POS'])}</select><input id="fee_r" placeholder="Reference / teller no (optional)"></div>
+ <button id="pl_save" onclick="saveFeeMulti()">Save payment</button>`;
+ plAdd()}}
+function plAdd(){const d=document.createElement('div');d.className='row pl';
+ d.innerHTML=`<select class="pl_t">${opts(PAYTYPES)}</select><select class="pl_i">${opts([...TRIS,'Full session'])}</select><input class="pl_a" type="number" min="0" placeholder="Amount (₦)" oninput="plTot()"><button type="button" class="s" onclick="if(document.querySelectorAll('.pl').length>1){this.parentNode.remove();plTot()}">✕</button>`;
+ $('#pl_rows').appendChild(d)}
+function plTot(){let t=0;document.querySelectorAll('.pl_a').forEach(i=>t+=+i.value||0);const e=$('#pl_tot');if(e)e.textContent=money(t)}
+async function saveFeeMulti(){
+ const sid=v('fee_s');if(!sid)return alert('Select a student.');
+ const L=[...document.querySelectorAll('.pl')].map(r=>({type:r.querySelector('.pl_t').value,tri:r.querySelector('.pl_i').value,a:+r.querySelector('.pl_a').value})).filter(x=>x.a>0);
+ if(!L.length)return alert('Enter an amount for at least one item.');
+ const s=FEE.st.find(x=>x.id===sid),tot=L.reduce((z,x)=>z+x.a,0),bal=(+s.feeDue||0)-(FEE.paid[sid]||0);
+ if(tot>bal&&!confirm('Total '+money(tot)+' is more than the balance ('+money(Math.max(bal,0))+'). Record anyway?'))return;
+ const no='RCP-'+today().replace(/-/g,'')+'-'+Math.floor(1000+Math.random()*9000),at=Date.now(),btn=$('#pl_save');
+ btn.disabled=true;
+ try{
+  const b=db.batch();
+  L.forEach((x,i)=>b.set(db.collection('fees').doc(),{studentId:sid,studentName:s.surname+' '+s.firstName,regNo:s.regNo||'',session:s.session||'',type:x.type,trimester:x.tri,amount:x.a,method:v('fee_m'),ref:v('fee_r').trim(),receiptNo:no,lineNo:i+1,lines:L.length,by:me.uid,byName:me.name,at:at+i}));
+  await b.commit();
+  const what=[...new Set(L.map(x=>x.type))].join(', ');
+  await notify('Fee recorded: '+money(tot)+' from '+s.surname+' '+s.firstName+' ('+what+')');
+  await pushTo(sid,'Payment received: '+money(tot)+' ('+what+'). Receipt '+no+'.');
+  go('fees');
+ }catch(e){btn.disabled=false;alert('Could not save payment: '+(e.code||e.message))}}
+async function receipt(id){
+ const f=(await db.doc('fees/'+id).get()).data(),s=(await db.doc('students/'+f.studentId).get()).data()||{};
+ let L=[f];
+ if(f.receiptNo){try{const r=(await list('fees',['studentId','==',f.studentId],['receiptNo','==',f.receiptNo])).sort((a,b)=>a.at-b.at);if(r.length)L=r}catch(e){}}
+ const tot=L.reduce((z,x)=>z+(+x.amount||0),0),w=window.open('');if(!w)return alert('Allow pop-ups to print the receipt.');
+ w.document.write(`<body style="font-family:Arial;padding:30px;max-width:600px"><img src="${esc(new URL(LOGO_URL,location.href).href)}" width=80>${s.photo?`<img src="${esc(s.photo)}" width=90 style="float:right">`:''}<h2>Payment Receipt</h2><p><b>No:</b> ${esc(f.receiptNo||'-')}<br><b>Date:</b> ${new Date(f.at).toLocaleString()}</p><p>${esc(s.surname)} ${esc(s.firstName)} (${esc(s.regNo)}) · ${esc(s.class||'')}</p><table border=1 cellpadding=6 style="border-collapse:collapse;width:100%"><tr><th>Item</th><th>Trimester</th><th>Amount</th></tr>${L.map(x=>`<tr><td>${esc(x.type)}</td><td>${esc(x.trimester||'')}</td><td>${money(x.amount)}</td></tr>`).join('')}<tr><td colspan=2><b>Total</b></td><td><b>${money(tot)}</b></td></tr></table><p>Method: ${esc(f.method||'-')}${f.ref?' · Ref: '+esc(f.ref):''}<br>Received by: ${esc(f.byName||'')}</p><script>print()<\/script>`)}
+
+// ---------- F. Management Overview: edit school contact info ----------
+{const o=V.mgmt;V.mgmt=async function(){await o();
+ const card=`<div class="card"><h3>School Contact Info</h3><p class="mut">Shown on every student's Overview tab. Only management can change it.</p><div class="row"><input id="mc_e" value="${esc(SCHOOL.email)}" placeholder="School email"><input id="mc_p" value="${esc(SCHOOL.phone)}" placeholder="Phone"></div><div class="row"><input id="mc_1" value="${esc(SCHOOL.loc['Ediam']||'')}" placeholder="Ediam campus location"><input id="mc_2" value="${esc(SCHOOL.loc['Ikot Oso']||'')}" placeholder="Ikot Oso campus location"></div><button onclick="saveContactMgmt()">Save contact info</button><p id="mc_m"></p></div>`;
+ const h=[...mainEl.querySelectorAll('h3')].find(x=>x.textContent==='Students'),c=h&&h.closest('.card');
+ if(c)c.insertAdjacentHTML('beforebegin',card);else mainEl.insertAdjacentHTML('beforeend',card)}}
+async function saveContactMgmt(){
+ const m=$('#mc_m'),d={email:v('mc_e').trim(),phone:v('mc_p').trim(),loc:{'Ediam':v('mc_1').trim(),'Ikot Oso':v('mc_2').trim()}};
+ try{await db.doc('settings/school').set(d,{merge:true});SCHOOL.email=d.email;SCHOOL.phone=d.phone;SCHOOL.loc=d.loc;m.className='green';m.textContent='Contact info saved. Students see it on their next sign-in.'}
+ catch(e){m.className='red';m.textContent='Could not save: '+(e.code||e.message)}}
+
+// ---------- G. Personal notifications ----------
+const pushTo=async(uid,msg)=>{if(!uid||!me||uid===me.uid)return;try{await db.collection('userNotes').add({to:uid,msg,read:false,at:Date.now(),by:me.uid,byName:me.name})}catch(e){console.warn('pushTo',e.code)}};
+V.myn=async function(){
+ const s=await db.collection('userNotes').where('to','==',me.uid).get(),n=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>b.at-a.at).slice(0,100);
+ set(`<div class="card"><div class="row"><h3 style="flex:1">My Notifications</h3>${n.length?'<button class="g" onclick="clearMyNotes()">Clear all</button>':''}</div>${n.map(x=>`<div class="ev" style="--k:${x.read?'var(--bd)':'var(--gold)'}"><div>${x.read?'':'<span class="tag" style="background:var(--ok)">NEW</span> '}${esc(x.msg)}<small>${esc(x.byName||'')}</small></div><span class="dt">${new Date(x.at).toLocaleString()}</span></div>`).join('')||'<p class="mut">Nothing yet. You will be notified here about payments, results, attendance, comments and more.</p>'}</div>`);
+ const u=n.filter(x=>!x.read);
+ if(u.length){const b=db.batch();u.forEach(x=>b.update(db.doc('userNotes/'+x.id),{read:true,readAt:Date.now()}));try{await b.commit()}catch(e){console.warn(e.code)}badge()}};
+async function clearMyNotes(){
+ if(!confirm('Clear all your notifications?'))return;
+ const s=await db.collection('userNotes').where('to','==',me.uid).get();
+ for(let i=0;i<s.docs.length;i+=400){const b=db.batch();s.docs.slice(i,i+400).forEach(d=>b.delete(d.ref));await b.commit()}
+ go('myn')}
+{const o=badge;badge=async function(){
+ await o();if(!me)return;
+ try{UNN=(await list('userNotes',['to','==',me.uid],['read','==',false])).length}catch(e){UNN=0;console.warn('userNotes',e.code)}
+ ACT=0;
+ if(MG.includes(me.role)){try{
+  const k='dsseen_'+me.uid;let t=0;try{t=+localStorage.getItem(k)||0}catch(e){}
+  if(!t){t=Date.now();try{localStorage.setItem(k,t)}catch(e){}}
+  ACT=(await list('notifications',['at','>',t])).filter(x=>x.by!==me.uid).length}catch(e){console.warn('activity',e.code)}}
+ const n=BN+UNN+ACT,b=$('#bell');
+ if(b){b.innerHTML='🔔'+(n?`<sup class="bdg">${n}</sup>`:'');b.title=n?n+' new':'Nothing new'}
+ document.title=(n?'('+n+') ':'')+NT.base}}
+function bellGo(){go(UNN?'myn':BN?'msg':(MG.includes(me.role)?'notes':'msg'))}
+{const o=V.notes;V.notes=async function(){try{localStorage.setItem('dsseen_'+me.uid,Date.now())}catch(e){}await o();badge()}}
+function ntOpen(){try{window.focus()}catch(e){}if(me)go(NT.dest||'msg');NT.dest='msg'}
+{const o=ntAlert;ntAlert=function(t,x,d){NT.dest=d||'msg';o(t,x)}}
+{const o=ntStart;ntStart=function(){o();if(!me)return;
+ NT.unsubs.push(db.collection('userNotes').where('to','==',me.uid).onSnapshot(s=>{
+  if(NT.un1===me.uid+'ok')s.docChanges().forEach(c=>{if(c.type!='added')return;const m=c.doc.data();if(m.by!==me.uid)ntAlert('New activity on your account',m.msg||'','myn')});
+  NT.un1=me.uid+'ok'},e=>console.warn('userNotes live',e.code)));
+ if(MG.includes(me.role))NT.unsubs.push(db.collection('notifications').where('at','>',Date.now()).onSnapshot(s=>{
+  s.docChanges().forEach(c=>{if(c.type!='added')return;const m=c.doc.data();if(m.by===me.uid)return;NT.dest='notes';ntBanner('Activity',m.msg||'');if(document.hidden)ntSys('Activity',m.msg||'');badge()})},e=>console.warn('activity live',e.code)))}}
+
+async function postComment(id){
+ const t=v('cm').trim();if(!t)return;
+ await add('comments',{studentId:id,text:t,role:me.role});
+ if(id!==me.uid)await pushTo(id,me.name+' commented on your profile: '+t.slice(0,80));else await notify('New comment from '+me.name);
+ studentDash(id,'ac')}
+async function publish(id){
+ const d=await db.doc('results/'+id).get(),x=d.data()||{},b=(await owingMap())[x.studentId];
+ if(b)return alert('Blocked: this student owes '+money(b)+'. Clear the fees first.');
+ await db.doc('results/'+id).update({published:true});await notify('Results validated');
+ await pushTo(x.studentId,'Your '+x.subject+' result ('+x.trimester+') has been validated and is now available.');
+ go('pub')}
+async function publishAll(){
+ const ow=await owingMap(),r=(await list('results',['published','==',false])).filter(x=>!ow[x.studentId]);
+ if(!r.length)return alert('Nothing to validate (owing students are blocked).');
+ if(!confirm('Validate '+r.length+' result(s)? Results of owing students are skipped.'))return;
+ for(let i=0;i<r.length;i+=400){const b=db.batch();r.slice(i,i+400).forEach(x=>b.update(db.doc('results/'+x.id),{published:true}));await b.commit()}
+ await notify('Pending results validated (owing students skipped)');
+ const by={};r.forEach(x=>{(by[x.studentId]=by[x.studentId]||new Set()).add(x.trimester)});
+ await Promise.all(Object.entries(by).map(([id,t])=>pushTo(id,'Your results ('+[...t].join(', ')+') have been validated and are now available.')));
+ go('pub')}
+{const o=markAtt;markAtt=async function(uid,status,time){await o(uid,status,time);
+ const r=ROLL.rec[uid];if(NOPUSH||!r||uid===me.uid||Date.now()-(r.at||0)>5000)return;
+ pushTo(uid,'Attendance for '+ROLL.d+': '+r.status+(r.time&&r.time!=='-'?' at '+r.time:'')+'.')}}
+{const o=markRest;markRest=async function(){NOPUSH=true;try{await o()}finally{NOPUSH=false}}}
+{const o=reqAct;reqAct=async function(id,a){const r=REQ.find(x=>x.id===id);await o(id,a);
+ if(!r||!r.by||a==='Void')return;
+ try{const d=await db.doc('requisitions/'+id).get();if(d.exists&&d.data().status===a)await pushTo(r.by,'Your requisition '+r.no+' was '+a.toLowerCase()+' by '+me.name+'.')}catch(e){}}}
+// ===================== END UPDATE 7 =====================
+
 
 
 
