@@ -2019,4 +2019,63 @@ async function abLevels(){
 async function abLv(uid){try{await db.doc('abacusProfiles/'+uid).set({studentId:uid,abilityLevel:v('lv_'+uid),updatedAt:Date.now(),updatedBy:me.uid},{merge:true});alert('Level saved.')}catch(e){alert('Could not save: '+(e.code||e.message))}}
 // ===================== END UPDATE 8 =====================
 
+// ===================== UPDATE 9 : ABACUS VOICE (read aloud, listening mode, spoken feedback, say-your-answer) =====================
+// Paste this whole block right AFTER the line "END UPDATE 8" (inside the main script, before the closing script tag).
+const VO={on:'speechSynthesis' in window,mic:!!(window.SpeechRecognition||window.webkitSpeechRecognition),auto:false,oral:false,fb:true};
+try{VO.auto=localStorage.getItem('dsvo_auto')=='1';VO.oral=localStorage.getItem('dsvo_oral')=='1';VO.fb=localStorage.getItem('dsvo_fb')!='0'}catch(e){}
+function voSay(t,rate){
+ if(!VO.on)return;
+ try{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(t),vs=speechSynthesis.getVoices();
+  u.voice=vs.find(x=>/en[-_]NG/i.test(x.lang))||vs.find(x=>/en[-_]GB/i.test(x.lang))||vs.find(x=>/^en/i.test(x.lang))||null;
+  u.lang=u.voice?u.voice.lang:'en-GB';u.rate=rate||.9;speechSynthesis.speak(u)}catch(e){}}
+const voQ=q=>q.replace(/\s*\+\s*/g,', plus, ').replace(/\s*−\s*/g,', minus, ').replace(/\s*×\s*/g,', times, ').replace(/\s*÷\s*/g,', divided by, ').replace(/\(/g,'open bracket, ').replace(/\)/g,', close bracket, ');
+function voCur(){if(PR&&PR.i<PR.qs.length)return PR.qs[PR.i].q;if(CT&&!CT.done&&CT.items[CT.i])return CT.items[CT.i].q;return''}
+function voBar(){
+ if(!VO.on&&!VO.mic)return'';
+ const cb=(k,l)=>`<label class="mut" style="display:flex;align-items:center;gap:6px"><input type="checkbox" ${VO[k]?'checked':''} onchange="voSet('${k}',this.checked)" style="width:auto;margin:0">${l}</label>`;
+ return`<div class="card" style="margin:0 0 10px;padding:10px 12px"><div class="row" style="align-items:center;justify-content:center">${VO.on?`<button class="g" onclick="voRepeat()">🔊 Read aloud</button>`:''}${VO.mic?`<button class="g" onclick="voListen()">🎤 Say my answer</button>`:''}</div>
+ <div class="row" style="align-items:center;justify-content:center;margin-top:4px">${VO.on?cb('auto','Read each question automatically')+cb('oral','Listening mode (hide the question)')+cb('fb','Speak feedback'):''}</div><p id="vomsg" class="mut" style="text-align:center;min-height:18px;margin:4px 0 0"></p></div>`}
+function voSet(k,b){VO[k]=b;try{localStorage.setItem('dsvo_'+k,b?'1':'0')}catch(e){}
+ if(k=='oral'){const h=$('.abq'),q=voCur();if(h&&q)h.textContent=b?'🎧 Listen, then answer':q+' = ?';if(b)voRepeat()}
+ if(k=='auto'&&b)voRepeat()}
+function voRepeat(){const q=voCur();if(q)voSay(voQ(q),.85)}
+function voAfter(){
+ const q=voCur(),h=$('.abq');if(!q||!h)return;
+ h.insertAdjacentHTML('beforebegin',voBar());
+ if(VO.oral)h.textContent='🎧 Listen, then answer';
+ if(VO.auto||VO.oral)voSay(voQ(q),.85)}
+{const o=abPQ;abPQ=function(){const r=o.apply(this,arguments);voAfter();return r}}
+{const o=abCQ;abCQ=function(){const r=o.apply(this,arguments);voAfter();return r}}
+{const o=abPSub;abPSub=function(){const r=o.apply(this,arguments);const f=$('#abfb');
+ if(PR&&PR.fb&&f&&f.textContent&&VO.fb)voSay(f.textContent,.9);return r}}
+{const o=abPEnd;abPEnd=async function(){const r=await o.apply(this,arguments);
+ if(VO.fb&&PR)voSay('Practice complete. You scored '+PR.ok+' out of '+PR.qs.length+'.',.9);return r}}
+{const o=abFinish;abFinish=async function(auto){const was=CT&&CT.done;const r=await o.apply(this,arguments);
+ if(!was&&VO.fb)voSay((auto?'Time is up. ':'')+'Your answers have been submitted.',.9);return r}}
+{const o=abRender;abRender=function(){try{speechSynthesis.cancel()}catch(e){}return o.apply(this,arguments)}}
+
+// ---------- Say your answer (always check the number, then press Check / Save) ----------
+function voNum(t){
+ t=t.toLowerCase().replace(/,/g,'').replace(/-/g,' ');const d=t.match(/\d+/);if(d)return+d[0];
+ const U={zero:0,one:1,won:1,two:2,to:2,too:2,three:3,four:4,for:4,five:5,six:6,seven:7,eight:8,nine:9,ten:10,eleven:11,twelve:12,thirteen:13,fourteen:14,fifteen:15,sixteen:16,seventeen:17,eighteen:18,nineteen:19,twenty:20,thirty:30,forty:40,fifty:50,sixty:60,seventy:70,eighty:80,ninety:90};
+ let tot=0,cur=0,any=0;
+ for(const w of t.split(/\s+/)){if(w in U){cur+=U[w];any=1}else if(w=='hundred'){cur=(cur||1)*100;any=1}else if(w=='thousand'){tot+=(cur||1)*1000;cur=0;any=1}}
+ return any?tot+cur:null}
+function voFill(n){
+ if(AB.lock)return;
+ if(AB.mode=='abacus'){const L=AB.rods.length;if(n>=Math.pow(10,L)){$('#vomsg').textContent='I heard '+n+', which is too big for this abacus. Try again.';return}
+  const s=String(n).padStart(L,'0');AB.rods.forEach((x,i)=>{const dg=+s[i];x.h=dg>=5?1:0;x.e=dg%5});abPaint()}
+ else{AB.key=String(n).slice(0,7);$('#abv').textContent=AB.key}
+ $('#vomsg').textContent='I heard '+n+'. Check it, then continue.'}
+function voListen(){
+ const R=window.SpeechRecognition||window.webkitSpeechRecognition,m=$('#vomsg');if(!R||AB.lock)return;
+ try{speechSynthesis.cancel()}catch(e){}
+ const r=new R();r.lang='en-NG';r.interimResults=false;r.maxAlternatives=3;m.textContent='Listening... say your answer.';let got=0;
+ r.onresult=e=>{got=1;const a=[...e.results[0]].map(x=>x.transcript);let n=null;for(const t of a){n=voNum(t);if(n!==null)break}
+  if(n===null){m.textContent='I heard "'+a[0]+'". Please try again.';return}voFill(n)};
+ r.onerror=e=>{got=1;m.textContent=e.error=='not-allowed'?'Allow the microphone to use this. If you opened the portal inside Apps Script, use the GitHub Pages link.':'Microphone problem ('+e.error+'). Please try again.'};
+ r.onend=()=>{if(!got)m.textContent='I did not hear anything. Tap Say my answer and try again.'};
+ try{r.start()}catch(e){m.textContent='Could not start the microphone.'}}
+// ===================== END UPDATE 9 =====================
+
 </script></body></html>
