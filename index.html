@@ -1804,7 +1804,219 @@ async function publishAll(){
  try{const d=await db.doc('requisitions/'+id).get();if(d.exists&&d.data().status===a)await pushTo(r.by,'Your requisition '+r.no+' was '+a.toLowerCase()+' by '+me.name+'.')}catch(e){}}}
 // ===================== END UPDATE 7 =====================
 
+// ===================== UPDATE 8 : ABACUS CHAMPIONSHIP =====================
+// Paste this whole block right AFTER the line "END UPDATE 7" (inside the main script, before the closing script tag).
+const ABLV=['beginner','intermediate','advanced','championship'],
+ ABLN={beginner:'Beginner',intermediate:'Intermediate',advanced:'Advanced',championship:'Championship',any:'Mixed'},
+ ABD={beginner:'Single-digit addition and subtraction',intermediate:'Two- and three-digit sums',advanced:'Multiplication, division and mixed',championship:'Multi-step and rapid calculations'},
+ ABR={beginner:3,intermediate:4,advanced:4,championship:5};
+let AB={tab:'home',lvl:'beginner',cls:'',campus:'',prof:null,comps:[],mine:{},board:[]},PR=null,CT=null,abTick=null;
+PAGES.push(['abacus','Abacus Championship']);SAFE.push('abacus');
+{const ms=new Set(['student','teacher','principal','proprietor','admin','chairman','administrator'].map(r=>MENU[r]).filter(Boolean));
+ ms.forEach(m=>{const i=m.findIndex(x=>x.startsWith('news:'));m.splice(i<0?m.length:i,0,'abacus:🧮 Abacus Championship')})}
 
+{const st=document.createElement('style');st.textContent=`
+.abhero{background:linear-gradient(135deg,#10213f 0%,#1c3f94 62%,#e0147a 150%);color:#fff;border-radius:22px;padding:26px;display:grid;grid-template-columns:minmax(0,1.2fr) auto;gap:22px;align-items:center;overflow:hidden}
+.abhero h1{margin:10px 0 8px;font-size:clamp(24px,4vw,36px);line-height:1.1}.abhero p{margin:0 0 14px;color:#cfd9ee;max-width:46ch;line-height:1.6}
+.chip{display:inline-block;padding:4px 12px;border-radius:20px;background:#ffffff26;font-size:12px;font-weight:600}
+.abx{display:inline-block;user-select:none;-webkit-user-select:none;touch-action:manipulation;max-width:100%}
+.abf{display:flex;padding:12px 10px;border-radius:14px;background:linear-gradient(#6b4423,#3f2612);box-shadow:inset 0 0 0 3px #2a190b,0 12px 28px #0006}
+.abr{position:relative;width:54px;flex:0 0 54px}
+.abr:before{content:'';position:absolute;left:50%;top:0;bottom:0;width:4px;margin-left:-2px;background:linear-gradient(90deg,#9a7208,#ffe08a,#9a7208)}
+.abh{position:relative;height:72px;border-bottom:8px solid #2a190b}.abe{position:relative;height:156px}
+.bd{position:absolute;left:5px;width:44px;height:30px;border-radius:50%/46%;cursor:pointer;transition:top .16s ease;box-shadow:inset 0 -4px 6px #0004,inset 0 3px 5px #fff6,0 2px 3px #0006}
+.bd.h{background:radial-gradient(circle at 35% 30%,#ff7ab8,#e0147a 60%,#9c0a55)}
+.bd.e{background:radial-gradient(circle at 35% 30%,#ffe58a,#f5b700 60%,#a87800)}
+.ro .bd{pointer-events:none}
+.abq{font-size:clamp(34px,8vw,56px);font-weight:800;text-align:center;margin:14px 0;letter-spacing:1px}
+.abdisp{text-align:center;font-size:40px;font-weight:800;min-height:58px;border-bottom:3px solid var(--gold);margin:8px auto;max-width:260px}
+.kp{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;max-width:300px;margin:10px auto}.kp button{margin:0;min-height:54px;font-size:22px;width:100%}
+.abt{font-variant-numeric:tabular-nums;font-weight:800;font-size:22px}
+.abm{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px}
+.abm .card{margin:0}.abm h3{margin:0 0 6px}
+.medal{font-size:20px}.me td{background:rgba(245,183,0,.16);font-weight:700}
+@media(max-width:800px){.abhero{grid-template-columns:1fr;padding:18px}.abhero .abx{justify-self:center}.abf{padding:8px 6px}}
+@media(prefers-reduced-motion:reduce){.bd{transition:none}}`;document.head.appendChild(st)}
 
+// ---------- Questions (same generator for practice and contests) ----------
+const abRnd=s=>()=>{s|=0;s=s+0x6D2B79F5|0;let t=Math.imul(s^s>>>15,1|s);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296};
+function abQ(lv,r){
+ const n=(a,b)=>a+Math.floor(r()*(b-a+1));let a,b,c,d;
+ if(lv=='beginner'){a=n(1,9);b=n(1,9);if(r()<.5)return{q:a+' + '+b,a:a+b};if(a<b)[a,b]=[b,a];return{q:a+' − '+b,a:a-b}}
+ if(lv=='intermediate'){a=n(10,999);b=n(10,999);if(r()<.5)return{q:a+' + '+b,a:a+b};if(a<b)[a,b]=[b,a];return{q:a+' − '+b,a:a-b}}
+ if(lv=='advanced'){const t=n(0,2);
+  if(t==0){a=n(2,12);b=n(2,12);return{q:a+' × '+b,a:a*b}}
+  if(t==1){b=n(2,12);c=n(2,12);return{q:(b*c)+' ÷ '+b,a:c}}
+  a=n(1,50);b=n(2,9);c=n(2,9);return{q:a+' + '+b+' × '+c,a:a+b*c}}
+ const t=n(0,3);
+ if(t==0){a=n(10,60);b=n(10,60);c=n(2,9);return{q:'('+a+' + '+b+') × '+c,a:(a+b)*c}}
+ if(t==1){a=n(12,99);b=n(2,9);c=n(1,Math.min(50,a*b-1));return{q:a+' × '+b+' − '+c,a:a*b-c}}
+ if(t==2){a=n(20,99);b=n(2,12);c=n(2,12);d=n(1,a);return{q:a+' + '+b+' × '+c+' − '+d,a:a+b*c-d}}
+ a=n(11,99);b=n(11,99);return{q:a+' × '+b,a:a*b}}
+
+// ---------- Abacus widget (1 heaven bead = 5, 4 earth beads = 1 each, per rod) ----------
+const abRods=n=>Array.from({length:n},()=>({h:0,e:0})),abVal=r=>r.reduce((s,x)=>s*10+x.h*5+x.e,0);
+function abHTML(id,rods,ro){return`<div class="abx${ro?' ro':''}" id="${id}"><div class="abf">${rods.map((x,i)=>`<div class="abr"><div class="abh"><i class="bd h" onclick="abT(${i},'h')" style="top:${x.h?34:0}px"></i></div><div class="abe">${[0,1,2,3].map(k=>`<i class="bd e" onclick="abT(${i},${k})" style="top:${k<x.e?k*30:36+k*30}px"></i>`).join('')}</div></div>`).join('')}</div></div>`}
+function abT(i,k){if(!AB.rods||AB.lock)return;const x=AB.rods[i];if(k==='h')x.h^=1;else x.e=k<x.e?k:k+1;abPaint()}
+function abPaint(){document.querySelectorAll('#abw .abr').forEach((el,i)=>{const x=AB.rods[i];el.querySelector('.h').style.top=(x.h?34:0)+'px';el.querySelectorAll('.e').forEach((b,k)=>b.style.top=(k<x.e?k*30:36+k*30)+'px')});const o=$('#abv');if(o)o.textContent=abVal(AB.rods)}
+function abInput(mode,n){AB.mode=mode;AB.key='';AB.rods=abRods(n);AB.lock=false;
+ return mode=='abacus'?`<div style="text-align:center"><div id="abw">${abHTML('abw0',AB.rods)}</div><p class="mut">The abacus shows <b id="abv" style="font-size:24px;color:var(--tx)">0</b></p></div>`
+ :`<div class="abdisp" id="abv"></div><div class="kp">${[7,8,9,4,5,6,1,2,3].map(k=>`<button onclick="abK('${k}')">${k}</button>`).join('')}<button class="g" onclick="abK('c')">C</button><button onclick="abK('0')">0</button><button class="g" onclick="abK('b')">⌫</button></div>`}
+function abK(k){if(AB.lock)return;if(k=='c')AB.key='';else if(k=='b')AB.key=AB.key.slice(0,-1);else if(AB.key.length<7)AB.key+=k;$('#abv').textContent=AB.key}
+const abIn=()=>AB.mode=='abacus'?abVal(AB.rods):(AB.key===''?null:+AB.key);
+const abFmt=t=>t?new Date(t.toMillis?t.toMillis():t).toLocaleString([],{dateStyle:'medium',timeStyle:'short'}):'-',abMs=t=>t&&t.toMillis?t.toMillis():+t||0;
+const abAudit=(act,id)=>db.collection('abacusAuditLogs').add({act,comp:id,by:me.uid,byName:me.name,at:Date.now()}).catch(()=>{});
+
+// ---------- Page shell ----------
+V.abacus=async function(){await abLoad();abRender()};
+async function abLoad(){
+ const S=me.role==='student';
+ if(S){
+  const s=await db.doc('students/'+me.uid).get(),d=s.exists?s.data():{};AB.cls=d.class||'';AB.campus=d.campus||'';
+  const p=await db.doc('abacusProfiles/'+me.uid).get();AB.prof=p.exists?p.data():null;AB.lvl=(AB.prof&&AB.prof.abilityLevel)||'beginner';
+  AB.comps=(await db.collection('abacusCompetitions').where('status','in',['open','closed']).get()).docs.map(x=>({id:x.id,...x.data()}));
+  AB.mine={};(await db.collection('abacusAttempts').where('studentId','==',me.uid).get()).docs.forEach(x=>AB.mine[x.data().compId]=x.data());
+ }else AB.comps=(await db.collection('abacusCompetitions').get()).docs.map(x=>({id:x.id,...x.data()}));
+ AB.comps.sort((a,b)=>abMs(b.startsAt)-abMs(a.startsAt))}
+function abTabs(l){return`<div class="tabs">${l.map(([k,n])=>`<button class="${AB.tab==k?'':'g'}" onclick="AB.tab='${k}';abRender()">${n}</button>`).join('')}</div>`}
+function abRender(){
+ clearInterval(abTick);PR=null;
+ const S=me.role==='student',M=MG.includes(me.role);
+ const tabs=S?[['home','Home'],['practice','Practice'],['contests','Contests'],['results','Results']]:[...(M?[['comps','Competitions']]:[]),['results','Results'],['levels','Student levels']];
+ if(!tabs.some(t=>t[0]==AB.tab))AB.tab=tabs[0][0];
+ const f={home:abHome,practice:abPracticeHub,contests:abContests,results:abResults,comps:abComps,levels:abLevels}[AB.tab];
+ Promise.resolve(f()).then(h=>set(abTabs(tabs)+h)).catch(e=>set('<div class="card"><b class="red">Could not load this page.</b><p>'+esc(e.code||e.message)+'</p><p class="mut">If this says permission-denied, publish the Update 8 Firestore rules.</p></div>'))}
+
+// ---------- Student: home + practice ----------
+function abHome(){const p=AB.prof||{};
+ return`<div class="abhero"><div><span class="chip">Session 2026/2027</span><h1>Divine Seeds Abacus Championship</h1><p>Slide the beads, solve it in your head, and climb the leaderboard. Training Godly Future Champions.</p><span class="chip">Your level: ${ABLN[AB.lvl]}</span></div>${abHTML('abm0',[2,0,2,6].map(d=>({h:d>=5?1:0,e:d%5})),1)}</div>
+ <div class="grid" style="margin:14px 0"><div class="card stat"><b>${p.practiceCompleted||0}</b><span>Practice sessions</span></div><div class="card stat"><b>${p.bestPracticeScore||0}/100</b><span>Best practice score</span></div><div class="card stat"><b>${Object.keys(AB.mine).length}</b><span>Contests entered</span></div></div>
+ <div class="abm"><div class="card"><h3>🧮 Practice</h3><p class="mut">Ten questions with the answer shown after each. Practice never changes rankings.</p><button onclick="AB.tab='practice';abRender()">Start practice</button></div>
+ <div class="card"><h3>🏆 Join a contest</h3><p class="mut">See which competitions are open for your level and campus.</p><button class="s" onclick="AB.tab='contests';abRender()">View contests</button></div>
+ <div class="card"><h3>📜 Results</h3><p class="mut">Leaderboards and certificates appear once a contest is scored.</p><button class="g" onclick="AB.tab='results';abRender()">See results</button></div></div>`}
+function abPracticeHub(){const lv=ABLV.slice(0,ABLV.indexOf(AB.lvl)+1);
+ return`<div class="card"><h3>Choose your practice</h3><p class="mut">Ten questions. You can practise at your level or any easier one.</p><select id="ab_pl">${lv.map(l=>`<option value="${l}" ${l==AB.lvl?'selected':''}>${ABLN[l]}: ${ABD[l]}</option>`).join('')}</select><div class="row"><button onclick="abPStart('abacus')">🧮 Virtual abacus</button><button class="s" onclick="abPStart('mental')">🧠 Mental arithmetic</button></div></div>`}
+function abPStart(mode){const lv=v('ab_pl')||AB.lvl;PR={mode,lv,qs:Array.from({length:10},()=>abQ(lv,Math.random)),i:0,ok:0,fb:0};abPQ()}
+function abPQ(){
+ if(PR.i>=PR.qs.length)return abPEnd();
+ const q=PR.qs[PR.i],n=PR.qs.length;
+ set(`<div class="card"><div class="sum"><b>Question ${PR.i+1} of ${n}</b><span class="chip" style="background:var(--bg)">${ABLN[PR.lv]}</span></div><div class="bar"><i style="width:${PR.i/n*100}%"></i></div><div class="abq">${q.q} = ?</div>${abInput(PR.mode,ABR[PR.lv])}<p id="abfb" style="text-align:center;min-height:26px;font-weight:700"></p><div class="row" style="justify-content:center"><button id="abgo" onclick="abPSub()">Check answer</button><button class="g" onclick="abRender()">Quit</button></div></div>`)}
+function abPSub(){
+ if(PR.fb){PR.fb=0;PR.i++;return abPQ()}
+ const val=abIn();if(val===null)return;const q=PR.qs[PR.i],ok=val===q.a;
+ PR.ok+=ok?1:0;PR.fb=1;AB.lock=true;
+ const f=$('#abfb');f.className=ok?'green':'red';f.textContent=ok?'Correct! Well done.':'Not quite. The answer is '+q.a+'.';
+ $('#abgo').textContent=PR.i+1>=PR.qs.length?'See my score':'Next question'}
+async function abPEnd(){
+ const sc=PR.ok*10,p=AB.prof;
+ try{
+  if(p){await db.doc('abacusProfiles/'+me.uid).update({practiceCompleted:firebase.firestore.FieldValue.increment(1),bestPracticeScore:Math.max(p.bestPracticeScore||0,sc),updatedAt:Date.now()});p.practiceCompleted=(p.practiceCompleted||0)+1;p.bestPracticeScore=Math.max(p.bestPracticeScore||0,sc)}
+  else{AB.prof={studentId:me.uid,name:me.name,practiceCompleted:1,bestPracticeScore:sc,updatedAt:Date.now()};await db.doc('abacusProfiles/'+me.uid).set(AB.prof)}
+ }catch(e){console.warn('profile',e.code)}
+ set(`<div class="card" style="text-align:center"><h3>Practice complete</h3><div class="abq">${PR.ok} / ${PR.qs.length}</div><p class="mut">${sc>=80?'Outstanding work, champion!':sc>=50?'Good progress. Keep going.':'Every session makes you faster. Try again.'}</p><div class="row" style="justify-content:center"><button onclick="abPStart('${PR.mode}')">Practise again</button><button class="g" onclick="V.abacus()">Back to Abacus home</button></div></div>`)}
+
+// ---------- Student: contests ----------
+function abContests(){
+ const now=Date.now(),l=AB.comps.filter(c=>c.status=='open');
+ return l.map(c=>{
+  const ok=(c.campus=='All'||c.campus==AB.campus)&&(c.level=='any'||c.level==AB.lvl),st=abMs(c.startsAt),en=abMs(c.endsAt),a=AB.mine[c.id];let tag,btn='';
+  if(a&&a.status!='in-progress')tag=['Submitted','#12a150'];
+  else if(!ok)tag=['Not for your level or campus','#6b7a96'];
+  else if(now<st)tag=['Opens '+abFmt(st),'#1c3f94'];
+  else if(now>en)tag=['Ended','#6b7a96'];
+  else{tag=['Open now','#e0147a'];btn=`<button class="s" onclick="abJoin('${c.id}')">${a?'Resume':'Join'}</button>`}
+  return`<div class="card"><div class="sum"><div><h3 style="margin:0 0 4px">${esc(c.title)}</h3><p class="mut">${c.mode=='abacus'?'Virtual abacus':'Mental arithmetic'} · ${c.format=='live'?'Live championship':'Individual challenge'} · ${ABLN[c.level]} · ${c.questionCount} questions · ${Math.round(c.durationSeconds/60)} min</p><p class="mut">Window: ${abFmt(st)} to ${abFmt(en)}</p></div><div><span class="tag" style="background:${tag[1]}">${esc(tag[0])}</span> ${btn}</div></div></div>`}).join('')
+ ||'<div class="card"><h3>No open contests</h3><p class="mut">Nothing is open right now. Keep practising and check back soon.</p></div>'}
+async function abJoin(id){
+ const c=AB.comps.find(x=>x.id==id);if(!c)return;let a=AB.mine[id];
+ if(!a&&c.format=='live'){const x=prompt('Enter the room code from your teacher');if(x==null)return;if(x.trim().toUpperCase()!==c.code){alert('That room code is not right. Check it with your teacher.');return}}
+ const ref=db.doc('abacusAttempts/'+id+'_'+me.uid);
+ try{
+  if(!a){await ref.set({compId:id,studentId:me.uid,name:me.name,class:AB.cls,campus:AB.campus,startedAt:firebase.firestore.FieldValue.serverTimestamp(),status:'in-progress',score:0,correct:0,answers:{}});a=(await ref.get()).data();AB.mine[id]=a}
+  const q=await db.doc('abacusQuestions/'+id).get();if(!q.exists)throw{message:'Questions are not available yet.'};
+  const start=abMs(a.startedAt),ans=a.answers||{},keys=Object.keys(ans).map(Number);
+  CT={id,c,items:q.data().items,ans,ref:ref.path,i:keys.length?Math.max(...keys)+1:0,end:Math.min(start+c.durationSeconds*1000,abMs(c.endsAt)),done:0,busy:0};
+  if(CT.i>=CT.items.length||CT.end<=Date.now())return abFinish();
+  abCQ();clearInterval(abTick);abTick=setInterval(abTickFn,500);
+ }catch(e){console.error(e);alert('Could not start the contest: '+(e.code||e.message))}}
+function abCQ(){
+ const q=CT.items[CT.i],n=CT.items.length;
+ set(`<div class="card"><div class="sum"><b>${esc(CT.c.title)}</b><span class="abt" id="abT"></span></div><p class="mut">Question ${CT.i+1} of ${n}. Your answers are saved as you go.</p><div class="bar"><i style="width:${CT.i/n*100}%"></i></div><div class="abq">${esc(q.q)} = ?</div>${abInput(CT.c.mode,CT.c.rods||4)}<div class="row" style="justify-content:center"><button onclick="abCSub()">Save and next</button><button class="g" onclick="abCSub(1)">Skip</button><button class="g" onclick="if(confirm('Finish and submit now?'))abFinish()">Finish</button></div></div>`);abTickFn()}
+function abTickFn(){const el=$('#abT');if(!el||!CT||CT.done){clearInterval(abTick);return}
+ const r=CT.end-Date.now();if(r<=0){el.textContent='0:00';return abFinish(1)}
+ const s=Math.ceil(r/1000);el.textContent=Math.floor(s/60)+':'+String(s%60).padStart(2,'0');el.style.color=s<=30?'var(--bad)':''}
+async function abCSub(skip){
+ if(!CT||CT.busy||CT.done)return;let val=null;
+ if(!skip){val=abIn();if(val===null)return}
+ CT.busy=1;
+ if(!skip){CT.ans[CT.i]=val;try{await db.doc(CT.ref).update({['answers.'+CT.i]:val})}catch(e){console.warn('save',e.code)}}
+ CT.busy=0;CT.i++;if(CT.i>=CT.items.length)return abFinish();abCQ()}
+async function abFinish(auto){
+ if(!CT||CT.done)return;CT.done=1;clearInterval(abTick);let ok=1;
+ try{await db.doc(CT.ref).update({status:'submitted',finishedAt:firebase.firestore.FieldValue.serverTimestamp()});AB.mine[CT.id]={...AB.mine[CT.id],status:'submitted'}}catch(e){ok=0;console.warn('submit',e.code)}
+ set(`<div class="card" style="text-align:center"><h3>${auto?'Time is up!':'Answers submitted'}</h3><p class="mut">${ok?'Your answers are in. Your score and the leaderboard appear after the contest is scored.':'Your answers were saved as you went. Your teacher will score what was saved.'}</p><button onclick="V.abacus()">Back to Abacus home</button></div>`)}
+
+// ---------- Results, leaderboard, certificates ----------
+async function abResults(){
+ const cl=AB.comps.filter(c=>c.resultsOut),S=me.role==='student';
+ let h='';
+ if(S){const my=Object.entries(AB.mine).map(([id,a])=>{const c=AB.comps.find(x=>x.id==id);return c?`<tr><td>${esc(c.title)}</td><td>${a.status=='scored'?a.score+' pts':'Awaiting scoring'}</td><td>${a.status=='scored'?a.correct+' / '+c.questionCount:'-'}</td></tr>`:''}).join('');
+  h+=`<div class="card"><h3>My contest results</h3>${my?`<table><tr><th>Contest</th><th>Score</th><th>Correct</th></tr>${my}</table>`:'<p class="mut">You have not entered a contest yet.</p>'}</div>`}
+ return h+`<div class="card"><h3>Leaderboard</h3><select id="ab_rc" onchange="abBoard(this.value)"><option value="">Choose a scored competition</option>${cl.map(c=>`<option value="${c.id}">${esc(c.title)}</option>`).join('')}</select><div id="abbd"></div></div>`}
+async function abBoard(id){
+ const box=$('#abbd');if(!id){box.innerHTML='';return}
+ box.innerHTML='<p class="mut">Loading...</p>';
+ AB.bc=id;AB.board=(await db.collection('abacusBoard').doc(id).collection('entries').get()).docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>a.rank-b.rank);
+ const S=me.role==='student',md=['','🥇','🥈','🥉'];
+ box.innerHTML=`<table><tr><th>Rank</th><th>Name</th><th>Class</th><th>Score</th><th>Correct</th><th>Time</th><th></th></tr>${AB.board.map(e=>`<tr class="${e.id==me.uid?'me':''}"><td class="medal">${md[e.rank]||e.rank}</td><td>${esc(S?e.show:e.name)}${e.id==me.uid?' (you)':''}</td><td>${esc(e.class||'')}</td><td>${e.score}</td><td>${e.correct}</td><td>${e.timeSec}s</td><td>${!S||e.id==me.uid?`<button class="g" onclick="abCert('${id}','${e.id}')">Certificate</button>`:''}</td></tr>`).join('')||'<tr><td>No entries.</td></tr>'}</table>${S?'':'<button onclick="abCSV()">Download CSV</button>'}`}
+function abCSV(){saveCSV('abacus-results-'+today()+'.csv',[['Rank','Name','Class','Campus','Score','Correct','Seconds'],...AB.board.map(e=>[e.rank,e.name,e.class||'',e.campus||'',e.score,e.correct,e.timeSec])])}
+function abCert(id,uid){
+ const c=AB.comps.find(x=>x.id==id),e=AB.board.find(x=>x.id==uid);if(!c||!e)return;
+ const w=window.open('','_blank');if(!w){alert('Allow pop-ups to print the certificate.');return}
+ const t=e.rank<=3?['','1st','2nd','3rd'][e.rank]+' Position':'Certificate of Participation',logo=new URL(LOGO_URL,location.href).href;
+ w.document.write(`<!doctype html><html><head><title>Certificate</title><style>@page{size:A4 landscape;margin:0}body{margin:0;font-family:Georgia,serif;color:#10213f;text-align:center}.b{margin:12mm;padding:14mm 10mm;border:6px double #b8860b;min-height:160mm;box-sizing:border-box}img{height:30mm}h1{font-size:34pt;margin:6mm 0 2mm;color:#1c3f94}h2{font-size:30pt;margin:6mm 0;color:#e0147a}p{font-size:15pt;margin:3mm 0}.s{margin-top:16mm;display:flex;justify-content:space-around}.s div{border-top:1px solid #10213f;padding-top:2mm;width:60mm;font-size:11pt}</style></head><body><div class="b"><img src="${logo}" onerror="this.remove()"><p>DIVINE SEEDS INTERNATIONAL EKET</p><h1>${esc(t)}</h1><p>is proudly awarded to</p><h2>${esc(e.name)}</h2><p>for ${e.rank<=3?'outstanding performance':'taking part'} in the</p><p><b>${esc(c.title)}</b></p><p>Score: ${e.score} points · ${e.correct} correct · Rank ${e.rank} of ${AB.board.length}</p><p>Session 2026/2027</p><div class="s"><div>Principal</div><div>Proprietor</div></div></div><script>setTimeout(()=>print(),400)<\/script></body></html>`);w.document.close()}
+
+// ---------- Staff: create, publish, score ----------
+function abComps(){
+ const lv=ABLV.map(l=>`<option value="${l}">${ABLN[l]}</option>`).join('')+'<option value="any">Mixed (everyone)</option>';
+ return`<div class="card"><h3>New competition</h3><div class="row"><input id="ab_t" placeholder="Title, e.g. DSAC Primary Championship"><select id="ab_m"><option value="abacus">Virtual abacus</option><option value="mental">Mental arithmetic</option></select><select id="ab_f"><option value="live">Live championship (room code)</option><option value="individual">Individual challenge</option></select></div>
+ <div class="row"><select id="ab_l">${lv}</select><select id="ab_c"><option value="All">All campuses</option>${Object.keys(SCHOOL.loc).map(k=>`<option>${esc(k)}</option>`).join('')}</select><input id="ab_n" type="number" value="20" placeholder="Questions"><input id="ab_d" type="number" value="10" placeholder="Minutes"><input id="ab_p" type="number" value="10" placeholder="Points per correct answer"></div>
+ <div class="row"><label class="mut">Starts<input id="ab_s" type="datetime-local"></label><label class="mut">Closes (individual challenge only)<input id="ab_e" type="datetime-local"></label></div>
+ <button onclick="abSave()">Create draft</button><p id="abm2" class="red"></p><p class="mut">Questions and answer keys are generated now. Students never receive the answer key.</p></div>
+ <div class="card"><h3>All competitions</h3><table><tr><th>Title</th><th>Type</th><th>Level</th><th>Campus</th><th>Starts</th><th>Room code</th><th>Status</th><th></th></tr>${AB.comps.map(c=>{const sc={draft:'#6b7a96',open:'#e0147a',closed:'#12a150'}[c.status];return`<tr><td>${esc(c.title)}</td><td>${c.mode=='abacus'?'Abacus':'Mental'} · ${c.format}</td><td>${ABLN[c.level]||''}</td><td>${esc(c.campus)}</td><td>${abFmt(c.startsAt)}</td><td><b>${esc(c.code||'-')}</b></td><td><span class="tag" style="background:${sc}">${c.status=='closed'?'scored':c.status}</span></td><td>${c.status=='draft'?`<button onclick="abPub('${c.id}')">Publish</button>`:''}${c.status=='open'?`<button class="s" onclick="abScore('${c.id}')">Close and score</button>`:''}${TOP.includes(me.role)?` <button class="g" onclick="abDel('${c.id}')">Delete</button>`:''}</td></tr>`}).join('')||'<tr><td>No competitions yet.</td></tr>'}</table></div>`}
+async function abSave(){
+ const m=$('#abm2'),t=v('ab_t').trim(),n=+v('ab_n'),mn=+v('ab_d'),s=v('ab_s'),fmt=v('ab_f');
+ if(!t||!s||!(n>0&&n<=100)||!(mn>0&&mn<=180)){m.textContent='Enter a title, a start time, 1 to 100 questions and 1 to 180 minutes.';return}
+ const st=new Date(s),en=fmt=='live'?new Date(st.getTime()+mn*60000+90000):(v('ab_e')?new Date(v('ab_e')):new Date(st.getTime()+7*864e5));
+ if(en<=st){m.textContent='The closing time must be after the start time.';return}
+ const l=v('ab_l'),ql=l=='any'?'intermediate':l,r=abRnd(Date.now()%2147483647),qs=Array.from({length:n},()=>abQ(ql,r)),T=firebase.firestore.Timestamp,ref=db.collection('abacusCompetitions').doc(),b=db.batch();
+ b.set(ref,{title:t,mode:v('ab_m'),format:fmt,level:l,campus:v('ab_c'),questionCount:n,durationSeconds:mn*60,pts:+v('ab_p')||10,rods:ABR[ql],startsAt:T.fromDate(st),endsAt:T.fromDate(en),status:'draft',resultsOut:false,code:fmt=='live'?Math.random().toString(36).slice(2,8).toUpperCase():'',createdBy:me.uid,createdByName:me.name,at:Date.now()});
+ b.set(db.doc('abacusQuestions/'+ref.id),{items:qs.map(x=>({q:x.q}))});b.set(db.doc('abacusKeys/'+ref.id),{answers:qs.map(x=>x.a)});
+ try{await b.commit();await abAudit('create',ref.id);await abLoad();abRender()}catch(e){m.textContent='Could not save: '+(e.code||e.message)}}
+async function abPub(id){try{await db.doc('abacusCompetitions/'+id).update({status:'open'});const c=AB.comps.find(x=>x.id==id);await notify('Abacus competition published: '+(c?c.title:''));await abAudit('publish',id);await abLoad();abRender()}catch(e){alert('Could not publish: '+(e.code||e.message))}}
+async function abDel(id){if(!confirm('Delete this competition and its questions? This cannot be undone.'))return;try{await Promise.all([db.doc('abacusCompetitions/'+id).delete(),db.doc('abacusQuestions/'+id).delete(),db.doc('abacusKeys/'+id).delete()]);await abAudit('delete',id);await abLoad();abRender()}catch(e){alert('Could not delete: '+(e.code||e.message))}}
+async function abScore(id){
+ const c=AB.comps.find(x=>x.id==id);if(!c||!confirm('Close "'+c.title+'", score every attempt and publish the leaderboard?'))return;
+ try{
+  const keys=(await db.doc('abacusKeys/'+id).get()).data().answers,pts=c.pts||10;
+  const at=(await db.collection('abacusAttempts').where('compId','==',id).get()).docs;
+  const rows=at.map(d=>{const a=d.data(),an=a.answers||{};let ok=0;keys.forEach((k,i)=>{if(an[i]===k)ok++});
+   const fin=a.finishedAt?Math.max(1,Math.round((abMs(a.finishedAt)-abMs(a.startedAt))/1000)):c.durationSeconds,nm=(a.name||'').trim().split(/\s+/);
+   return{ref:d.ref,uid:a.studentId,name:a.name||'',show:nm[0]+(nm.length>1?' '+nm[nm.length-1][0]+'.':''),class:a.class||'',campus:a.campus||'',score:ok*pts,correct:ok,timeSec:Math.min(fin,c.durationSeconds)}});
+  rows.sort((a,b)=>b.score-a.score||a.timeSec-b.timeSec);
+  for(let i=0;i<rows.length;i+=200){const b=db.batch();rows.slice(i,i+200).forEach((r,j)=>{const rank=i+j+1;
+   b.update(r.ref,{score:r.score,correct:r.correct,status:'scored',timeSec:r.timeSec,rank});
+   b.set(db.doc('abacusBoard/'+id+'/entries/'+r.uid),{name:r.name,show:r.show,class:r.class,campus:r.campus,score:r.score,correct:r.correct,timeSec:r.timeSec,rank})});await b.commit()}
+  await db.doc('abacusCompetitions/'+id).update({status:'closed',resultsOut:true,scoredAt:Date.now(),scoredBy:me.uid});
+  await abAudit('score',id);await abLoad();abRender();alert('Scored '+rows.length+' attempt(s). The leaderboard is now visible to students.');
+ }catch(e){console.error(e);alert('Could not score: '+(e.code||e.message))}}
+
+// ---------- Staff: student ability levels ----------
+async function abLevels(){
+ const [ss,ps]=await Promise.all([list('students'),db.collection('abacusProfiles').get()]),P={};ps.docs.forEach(d=>P[d.id]=d.data());
+ ss.sort((a,b)=>(a.surname||'').localeCompare(b.surname||''));
+ return`<div class="card"><h3>Student ability levels</h3><p class="mut">New students start at Beginner. Pick a level, then tap Save.</p><table><tr><th>Student</th><th>Class</th><th>Campus</th><th>Level</th><th></th></tr>${ss.map(s=>`<tr><td>${esc(s.surname)} ${esc(s.firstName)}</td><td>${esc(s.class||'')}</td><td>${esc(s.campus||'')}</td><td><select id="lv_${s.id}" style="margin:0">${ABLV.map(l=>`<option value="${l}" ${((P[s.id]||{}).abilityLevel||'beginner')==l?'selected':''}>${ABLN[l]}</option>`).join('')}</select></td><td><button onclick="abLv('${s.id}')">Save</button></td></tr>`).join('')||'<tr><td>No students found.</td></tr>'}</table></div>`}
+async function abLv(uid){try{await db.doc('abacusProfiles/'+uid).set({studentId:uid,abilityLevel:v('lv_'+uid),updatedAt:Date.now(),updatedBy:me.uid},{merge:true});alert('Level saved.')}catch(e){alert('Could not save: '+(e.code||e.message))}}
+// ===================== END UPDATE 8 =====================
 
 </script></body></html>
