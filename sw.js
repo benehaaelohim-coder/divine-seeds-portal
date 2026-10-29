@@ -1,5 +1,5 @@
 // Divine Seeds Portal service worker (network-first, lightweight)
-const CACHE = 'ds-portal-v3';
+const CACHE = 'ds-portal-v4';
 const SHELL = ['./', 'index.html', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png'];
 
 self.addEventListener('install', e => {
